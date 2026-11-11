@@ -1,0 +1,105 @@
+# RKS Academy production stack. Run from this folder:
+#   docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+#
+# Only Caddy is published (ports 80/443, automatic HTTPS). The web app, API and database talk on a private
+# network, so the API, its docs and PostgreSQL are never reachable from the internet.
+
+name: rks
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-rks}
+      POSTGRES_USER: ${POSTGRES_USER:-rks}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      TZ: Asia/Kolkata
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [internal]
+
+  api:
+    build: ../backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-rks}
+      DB_USERNAME: ${POSTGRES_USER:-rks}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      APP_JWT_SECRET: ${APP_JWT_SECRET:?Set APP_JWT_SECRET in .env (openssl rand -base64 48)}
+      APP_FRONTEND_ORIGIN: https://${DOMAIN:?Set DOMAIN in .env}
+      APP_WHATSAPP_NUMBER: ${APP_WHATSAPP_NUMBER:-910000000000}
+      APP_WHATSAPP_PROVIDER: ${APP_WHATSAPP_PROVIDER:-log}
+      APP_WHATSAPP_PHONE_NUMBER_ID: ${APP_WHATSAPP_PHONE_NUMBER_ID:-}
+      APP_WHATSAPP_ACCESS_TOKEN: ${APP_WHATSAPP_ACCESS_TOKEN:-}
+      APP_WHATSAPP_TEMPLATE: ${APP_WHATSAPP_TEMPLATE:-fee_reminder}
+      APP_WHATSAPP_LOGIN_TEMPLATE: ${APP_WHATSAPP_LOGIN_TEMPLATE:-login_code}
+      APP_WHATSAPP_TEMPLATE_LANG: ${APP_WHATSAPP_TEMPLATE_LANG:-en}
+      APP_REMINDERS_ENABLED: ${APP_REMINDERS_ENABLED:-true}
+      APP_ACADEMY_PHONE: ${APP_ACADEMY_PHONE:-+91 00000 00000}
+      APP_API_DOCS: "false"
+    networks: [internal]
+
+  web:
+    build: ../frontend
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      BACKEND_URL: http://api:8080
+    networks: [internal]
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on: [web]
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks: [internal]
+
+  # Nightly compressed dumps into ./backups, kept for BACKUP_KEEP_DAYS. Copy them off the server too
+  # (see README: "Off-site copies").
+  backup:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      PGDATABASE: ${POSTGRES_DB:-rks}
+      PGUSER: ${POSTGRES_USER:-rks}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-30}
+      BACKUP_AT: ${BACKUP_AT:-02:30}
+      TZ: Asia/Kolkata
+    volumes:
+      - ./backups:/backups
+      - ./backup.sh:/usr/local/bin/backup.sh:ro
+    entrypoint: ["/bin/sh", "/usr/local/bin/backup.sh"]
+    networks: [internal]
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:
+
+networks:
+  internal:

@@ -1,0 +1,37 @@
+# Pings the API every 14 minutes so Render's free tier (which sleeps after 15 idle minutes) stays awake.
+# Each ping also checks the database connection, so the database sees activity too.
+#
+# Prefer an external pinger (cron-job.org or UptimeRobot, see deploy/HOSTED.md): it is free, on time and emails
+# you when the API is down. Use this workflow only for a PUBLIC repository. On a private one, ~3,100 runs a month
+# exceed GitHub's free 2,000 Actions minutes. GitHub may also start scheduled runs late when it is busy.
+#
+# To turn it on: repository variable KEEP_API_AWAKE = true, and repository secret
+# API_HEALTH_URL = https://<your-service>.onrender.com/actuator/health. Without the variable every run is skipped,
+# and skipped runs use no minutes, so it can't eat the minutes the database job needs.
+name: Keep API awake
+
+on:
+  schedule:
+    - cron: "*/14 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: keep-api-awake
+  cancel-in-progress: true
+
+jobs:
+  ping:
+    if: vars.KEEP_API_AWAKE == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 4
+    steps:
+      - name: Ping the health check
+        env:
+          URL: ${{ secrets.API_HEALTH_URL }}
+        run: |
+          test -n "$URL" || { echo "::error::Set the API_HEALTH_URL secret"; exit 1; }
+          # A sleeping instance can take about a minute to wake, so allow for that.
+          curl --fail --silent --show-error --max-time 120 --retry 2 --retry-delay 10 --retry-all-errors "$URL"

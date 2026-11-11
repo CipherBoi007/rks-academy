@@ -1,0 +1,90 @@
+# Production-safe defaults. Secrets come from the environment; nothing here works without them.
+spring:
+  application:
+    name: rks-academy
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/rks_db}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD}
+    hikari:
+      # Hosted Postgres poolers cap connections (Supabase free: keep this at 5 or below).
+      maximum-pool-size: ${DB_POOL_SIZE:10}
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: Asia/Kolkata
+        default_batch_fetch_size: 50
+  flyway:
+    locations: classpath:db/migration
+  jackson:
+    time-zone: Asia/Kolkata
+    default-property-inclusion: always
+    serialization:
+      write-dates-as-timestamps: false
+  servlet:
+    multipart:
+      max-file-size: 2MB
+      max-request-size: 3MB
+
+server:
+  port: ${PORT:8080}
+  # Behind the reverse proxy: trust X-Forwarded-* so redirects and logs show the real scheme and client.
+  forward-headers-strategy: native
+  compression:
+    enabled: true
+    mime-types: application/json,text/csv
+    min-response-size: 2KB
+  shutdown: graceful
+  error:
+    include-message: never
+    include-stacktrace: never
+
+app:
+  jwt:
+    secret: ${APP_JWT_SECRET}
+    ttl: ${APP_JWT_TTL:12h}
+    family-ttl: ${APP_JWT_FAMILY_TTL:30d}
+  frontend-origin: ${APP_FRONTEND_ORIGIN:http://localhost:3000}
+  whatsapp-number: ${APP_WHATSAPP_NUMBER:910000000000}
+  # Set when the API is reachable from the internet (Render): the web app must send the same value.
+  proxy-key: ${APP_PROXY_KEY:}
+  whatsapp:
+    # "log" records reminders without contacting anyone; "cloud" sends via the WhatsApp Business Cloud API.
+    provider: ${APP_WHATSAPP_PROVIDER:log}
+    cloud:
+      api-url: ${APP_WHATSAPP_API_URL:https://graph.facebook.com/v23.0}
+      phone-number-id: ${APP_WHATSAPP_PHONE_NUMBER_ID:}
+      access-token: ${APP_WHATSAPP_ACCESS_TOKEN:}
+      template-name: ${APP_WHATSAPP_TEMPLATE:fee_reminder}
+      login-code-template: ${APP_WHATSAPP_LOGIN_TEMPLATE:login_code}
+      template-language: ${APP_WHATSAPP_TEMPLATE_LANG:en}
+  reminders:
+    enabled: ${APP_REMINDERS_ENABLED:true}
+    # 09:00 IST on the 1st of every month.
+    cron: ${APP_REMINDERS_CRON:0 0 9 1 * *}
+  academy:
+    name: Raja Kumaran Sethupathi Sports Academy
+    short-name: RKS Academy
+    address: Ramanathapuram, Tamil Nadu
+    phone: ${APP_ACADEMY_PHONE:+91 00000 00000}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+
+# API docs are a development aid: off in production unless APP_API_DOCS=true.
+springdoc:
+  api-docs:
+    enabled: ${APP_API_DOCS:false}
+  swagger-ui:
+    enabled: ${APP_API_DOCS:false}
+    path: /swagger-ui.html
+    persist-authorization: true

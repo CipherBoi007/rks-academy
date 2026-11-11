@@ -1,0 +1,30 @@
+# Local development only: demo data, dev logins, a pinned demo date and throwaway secrets.
+# APP_DEMO_DATE is read by ClockConfig only under this profile. An environment variable of the same
+# name overrides it; set it to empty (APP_DEMO_DATE=) to use the real date while still on dev data.
+APP_DEMO_DATE: 2026-11-05
+
+spring:
+  datasource:
+    # Local PostgreSQL (pgAdmin): database rks_db, user postgres.
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/rks_db}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:root}
+  flyway:
+    locations: classpath:db/migration,classpath:db/demo
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+
+app:
+  family:
+    # Dev only: with the "log" WhatsApp provider no code is really sent, so return it to the sign-in screen.
+    expose-dev-codes: true
+  jwt:
+    secret: ${APP_JWT_SECRET:dev-only-secret-change-me-0123456789abcdef}
+
+logging:
+  level:
+    in.rks.academy: DEBUG

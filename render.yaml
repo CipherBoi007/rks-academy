@@ -1,0 +1,36 @@
+# Render Blueprint for the API (Render dashboard → New → Blueprint → pick this repo).
+# Values marked sync: false are secrets: Render asks for them on first deploy and never stores them in git.
+services:
+  - type: web
+    name: rks-api
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    region: singapore
+    plan: free
+    healthCheckPath: /actuator/health
+    autoDeploy: true
+    envVars:
+      - key: DB_URL
+        sync: false # jdbc:postgresql://<session pooler host>:5432/postgres?sslmode=require
+      - key: DB_USERNAME
+        sync: false # postgres.<project-ref>
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_POOL_SIZE
+        value: "5"
+      - key: APP_JWT_SECRET
+        generateValue: true
+      - key: APP_PROXY_KEY
+        sync: false # the same value goes into Vercel as BACKEND_PROXY_KEY
+      - key: APP_FRONTEND_ORIGIN
+        sync: false # https://<your-app>.vercel.app or your own domain
+      - key: APP_WHATSAPP_NUMBER
+        value: "910000000000"
+      - key: APP_ACADEMY_PHONE
+        value: "+91 00000 00000"
+      - key: APP_WHATSAPP_PROVIDER
+        value: log
+      # Off until WhatsApp is live: in "log" mode a month's reminders are recorded as sent and won't be resent.
+      - key: APP_REMINDERS_ENABLED
+        value: "false"

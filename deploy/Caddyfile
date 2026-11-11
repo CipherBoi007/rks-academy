@@ -1,0 +1,17 @@
+# Automatic HTTPS from Let's Encrypt for $DOMAIN (renewed by Caddy). Everything goes to the Next.js app,
+# which proxies /api/v1 to the API over the private network.
+{$DOMAIN} {
+	encode zstd gzip
+
+	header {
+		-Server
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+	}
+
+	# Uploaded photos can be up to 2 MB; refuse anything far larger at the edge.
+	request_body {
+		max_size 5MB
+	}
+
+	reverse_proxy web:3000
+}

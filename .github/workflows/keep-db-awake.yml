@@ -1,0 +1,60 @@
+# Keeps the Supabase free-tier database from being paused (it pauses after 7 days without activity) and,
+# when BACKUP_PASSPHRASE is set, keeps an encrypted backup (Supabase's free tier has no downloadable backups).
+#
+# Repository secrets (Settings → Secrets and variables → Actions):
+#   SUPABASE_DB_URL    postgresql://postgres.<project-ref>:<url-encoded password>@<session pooler host>:5432/postgres?sslmode=require
+#   BACKUP_PASSPHRASE  optional; a long random passphrase. Keep a copy somewhere safe: without it backups can't be opened.
+name: Keep database awake
+
+on:
+  schedule:
+    - cron: "30 21 */3 * *" # every third day at 03:00 IST
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: keep-db-awake
+
+jobs:
+  touch-database:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        shell: bash # -eo pipefail, so a failed dump fails the run
+    env:
+      DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+      BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+    steps:
+      - name: Install the PostgreSQL 17 client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y -qq postgresql-client-17
+
+      - name: Run a light query
+        run: |
+          test -n "$DATABASE_URL" || { echo "::error::Set the SUPABASE_DB_URL secret"; exit 1; }
+          /usr/lib/postgresql/17/bin/psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -tAc \
+            "select 'courts: ' || count(*) from court"
+
+      - name: Encrypted backup
+        if: env.BACKUP_PASSPHRASE != ''
+        run: |
+          file="rks-$(TZ=Asia/Kolkata date +%Y%m%d-%H%M).dump.gpg"
+          /usr/lib/postgresql/17/bin/pg_dump "$DATABASE_URL" --format=custom --schema=public --no-owner --no-privileges \
+            | gpg --batch --yes --pinentry-mode loopback --symmetric --cipher-algo AES256 \
+                  --passphrase-file <(printf '%s' "$BACKUP_PASSPHRASE") --output "$file"
+          ls -lh "$file"
+
+      - name: Keep the backup for 3 weeks
+        if: env.BACKUP_PASSPHRASE != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: rks-db-backup-${{ github.run_number }}
+          path: rks-*.dump.gpg
+          retention-days: 21
+          if-no-files-found: error
