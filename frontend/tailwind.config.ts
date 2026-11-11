@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import plugin from "tailwindcss/plugin";
 import { colors } from "./src/lib/theme";
 
 /** "#111111" plus alpha becomes rgba(), so even shadows are derived from the palette. */
@@ -12,12 +13,6 @@ const config: Config = {
   content: ["./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
-      // Short phones (e.g. 360x640): lets one-screen layouts like sign-in tighten up instead of scrolling.
-      // Tall phones (e.g. 390x844): room to make one-screen layouts roomier instead of leaving empty space.
-      screens: {
-        short: { raw: "(max-width: 767px) and (max-height: 700px)" },
-        tall: { raw: "(max-width: 767px) and (min-height: 780px)" },
-      },
       colors,
       fontFamily: {
         display: ["var(--font-oswald)", "Bebas Neue", "sans-serif"],
@@ -47,7 +42,14 @@ const config: Config = {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    // Height-aware phone variants for one-screen layouts such as sign-in. Defined as variants, not screens, so the
+    // width breakpoints (and their max-* variants) stay untouched.
+    plugin(({ addVariant }) => {
+      addVariant("short", "@media (max-width: 767px) and (max-height: 700px)"); // e.g. 360x640: tighten up
+      addVariant("tall", "@media (max-width: 767px) and (min-height: 780px)"); // e.g. 390x844: roomier
+    }),
+  ],
 };
 
 export default config;

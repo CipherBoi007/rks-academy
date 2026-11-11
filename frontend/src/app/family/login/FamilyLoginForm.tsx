@@ -122,8 +122,9 @@ export function FamilyLoginForm({ intro }: { intro?: ReactNode }) {
   }
 
   return (
-    <form onSubmit={verify} noValidate className="mt-5 space-y-4 short:mt-3 short:space-y-3 tall:mt-8 tall:space-y-5 md:mt-8 md:space-y-5">
-      <p className="rounded-xl bg-surface px-4 py-3 text-[15px] text-ink/80">{sent?.message}</p>
+    // data-step lets the sign-in frame drop the crest on this step, so it fits one phone screen.
+    <form data-step="code" onSubmit={verify} noValidate className="mt-5 space-y-4 short:mt-3 short:space-y-3 tall:mt-6 md:mt-8 md:space-y-5">
+      <p className="text-center text-sm text-ink/80">{sent?.message}</p>
       {sent?.devCode && (
         <p className="rounded-xl border border-dashed border-primary/40 bg-primary-50 px-4 py-3 text-sm text-primary-700">
           Development mode: WhatsApp isn&apos;t connected, so here is the code: <strong className="tracking-widest">{sent.devCode}</strong>

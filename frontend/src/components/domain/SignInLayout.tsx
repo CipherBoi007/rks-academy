@@ -23,9 +23,10 @@ export function SignInLayout({
   children: ReactNode;
 }) {
   return (
-    <div className="flex min-h-dvh flex-col bg-white md:flex-row">
-      {/* Phones: the banner is only as tall as its text. md and up: the photo fills the left half. */}
-      <section className="relative shrink-0 overflow-hidden bg-navy md:min-h-dvh md:w-1/2">
+    <div className="group flex min-h-dvh flex-col bg-white md:flex-row">
+      {/* Phones: the photo banner takes the top ~30% of the screen, the sign-in sheet the rest. md and up: the
+          photo fills the left half. */}
+      <section className="relative h-[30dvh] min-h-[180px] shrink-0 overflow-hidden bg-navy short:h-[24dvh] short:min-h-[148px] md:h-auto md:min-h-dvh md:w-1/2">
         <Image
           src="/demo/banners/login-court.jpg"
           alt=""
@@ -35,7 +36,8 @@ export function SignInLayout({
           className="object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-b from-primary/60 via-primary/70 to-navy" aria-hidden />
-        <div className="relative px-4 pb-9 pt-5 short:pb-7 short:pt-4 tall:pb-11 tall:pt-7 sm:p-8 md:absolute md:inset-x-0 md:bottom-0 md:p-12">
+        {/* Headline at the bottom of the photo, clear of the sheet that overlaps it by 1rem on phones. */}
+        <div className="absolute inset-x-0 bottom-0 px-4 pb-9 sm:px-8 md:p-12">
           <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-accent md:text-xs">{eyebrow}</p>
           <h1 className="mt-1.5 font-display text-[28px] font-bold uppercase leading-[0.95] text-white short:text-2xl sm:text-4xl md:mt-3 md:text-6xl">
             {headline}
@@ -54,7 +56,7 @@ export function SignInLayout({
               width={190}
               height={190}
               priority
-              className="mx-auto h-16 w-16 short:h-12 short:w-12 tall:h-24 tall:w-24 md:h-[170px] md:w-[170px]"
+              className="mx-auto h-16 w-16 short:h-12 short:w-12 tall:h-24 tall:w-24 group-has-[[data-step=code]]:hidden md:h-[170px] md:group-has-[[data-step=code]]:inline md:w-[170px]"
             />
             <h2 className="mt-2 font-display text-xl font-bold uppercase leading-tight tall:mt-3 tall:text-2xl md:mt-4 md:text-[32px]">{title}</h2>
             <p className="mt-0.5 text-sm text-muted tall:mt-1 tall:text-base md:mt-1 md:text-base">{subtitle}</p>
