@@ -11,3 +11,4 @@ deploy/backups/
 .vercel/
 *.dump
 *.dump.gpg
+deploy/secrets/

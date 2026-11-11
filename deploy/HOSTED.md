@@ -44,9 +44,27 @@ Create a **private** repository and push the whole `RKS` folder: `frontend/`, `b
 
 You don't create any tables yourself. The API creates them on first start (Flyway migrations V1–V6).
 
-## 3. Two secrets to generate
+## 3. Generate every value (one script)
 
-Run these in PowerShell on your PC. Each prints a random value.
+From Command Prompt or PowerShell:
+
+```cmd
+powershell -ExecutionPolicy Bypass -File D:\RKS\deploy\make-env.ps1
+```
+
+It asks for the Supabase Session pooler URI and password, your addresses, and the owner's name and mobile. It then writes these files to `deploy\secrets\`, which git ignores:
+
+| File | Where it goes |
+|---|---|
+| `render.env` | Render → Environment → *Add from .env* |
+| `vercel.env` | Vercel → Settings → Environment Variables (paste) |
+| `github-secrets.txt` | GitHub → Settings → Secrets and variables → Actions |
+| `cron-job.txt` | cron-job.org |
+| `create-owner.cmd` | Double-click once Render is live (step 5) |
+
+Secrets are generated once and reused. Run it again whenever an address changes, for example once you know your Vercel URL.
+
+To generate a single secret by hand instead, run this in **PowerShell** (not Command Prompt). It prints a random value:
 
 ```powershell
 $b = New-Object byte[] 48; [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b); [Convert]::ToBase64String($b)
