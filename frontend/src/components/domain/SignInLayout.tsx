@@ -28,14 +28,15 @@ export function SignInLayout({
           photo fills the left half. */}
       <section className="relative h-[30dvh] min-h-[180px] shrink-0 overflow-hidden bg-navy short:h-[24dvh] short:min-h-[148px] md:h-auto md:min-h-dvh md:w-1/2">
         <Image
-          src="/demo/banners/login-court.jpg"
+          src="/brand/login-badminton.jpg"
           alt=""
           fill
           priority
           sizes="(min-width: 768px) 50vw, 100vw"
-          className="object-cover"
+          className="object-cover object-[68%_50%]"
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-primary/60 via-primary/70 to-navy" aria-hidden />
+        {/* Light at the top so the photo shows, dark at the bottom so the headline stays readable. */}
+        <div className="absolute inset-0 bg-gradient-to-b from-navy/10 via-navy/35 to-navy/90" aria-hidden />
         {/* Headline at the bottom of the photo, clear of the sheet that overlaps it by 1rem on phones. */}
         <div className="absolute inset-x-0 bottom-0 px-4 pb-9 sm:px-8 md:p-12">
           <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-accent md:text-xs">{eyebrow}</p>
