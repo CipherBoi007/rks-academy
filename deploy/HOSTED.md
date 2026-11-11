@@ -42,7 +42,7 @@ Create a **private** repository and push the whole `RKS` folder: `frontend/`, `b
      - **user**: `postgres.abcdefghijkl`
      - **password**
 
-You don't create any tables yourself. The API creates them on first start (Flyway migrations V1–V6).
+You don't create any tables yourself. The API creates them on first start (Flyway migrations V1–V6) in its own schema, **`rks`** (`DB_SCHEMA=rks`). Supabase keeps its own objects in `public`, and Flyway refuses to start in a schema that isn't empty. A separate schema also keeps the app's tables out of Supabase's Data API, which only publishes `public`.
 
 ## 3. Generate every value (one script)
 

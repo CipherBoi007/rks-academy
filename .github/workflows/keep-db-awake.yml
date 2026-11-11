@@ -27,6 +27,7 @@ jobs:
     env:
       DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
       BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+      DB_SCHEMA: ${{ vars.DB_SCHEMA || 'rks' }} # the API's DB_SCHEMA
     steps:
       - name: Install the PostgreSQL 17 client
         run: |
@@ -39,13 +40,13 @@ jobs:
         run: |
           test -n "$DATABASE_URL" || { echo "::error::Set the SUPABASE_DB_URL secret"; exit 1; }
           /usr/lib/postgresql/17/bin/psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -tAc \
-            "select 'courts: ' || count(*) from court"
+            "select 'courts: ' || count(*) from \"$DB_SCHEMA\".court"
 
       - name: Encrypted backup
         if: env.BACKUP_PASSPHRASE != ''
         run: |
           file="rks-$(TZ=Asia/Kolkata date +%Y%m%d-%H%M).dump.gpg"
-          /usr/lib/postgresql/17/bin/pg_dump "$DATABASE_URL" --format=custom --schema=public --no-owner --no-privileges \
+          /usr/lib/postgresql/17/bin/pg_dump "$DATABASE_URL" --format=custom --schema="$DB_SCHEMA" --no-owner --no-privileges \
             | gpg --batch --yes --pinentry-mode loopback --symmetric --cipher-algo AES256 \
                   --passphrase-file <(printf '%s' "$BACKUP_PASSPHRASE") --output "$file"
           ls -lh "$file"

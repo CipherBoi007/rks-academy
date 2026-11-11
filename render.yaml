@@ -19,6 +19,9 @@ services:
         sync: false
       - key: DB_POOL_SIZE
         value: "5"
+      # The app's own schema, separate from Supabase's objects in public (and from its Data API).
+      - key: DB_SCHEMA
+        value: rks
       - key: APP_JWT_SECRET
         generateValue: true
       - key: APP_PROXY_KEY

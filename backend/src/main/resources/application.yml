@@ -9,6 +9,9 @@ spring:
     hikari:
       # Hosted Postgres poolers cap connections (Supabase free: keep this at 5 or below).
       maximum-pool-size: ${DB_POOL_SIZE:10}
+      # The schema holding the app's tables. "public" locally; on Supabase use "rks", so the app never mixes with
+      # Supabase's own objects in public, and Supabase's Data API (which publishes public) can't see its tables.
+      schema: ${DB_SCHEMA:public}
   lifecycle:
     timeout-per-shutdown-phase: 20s
   jpa:
@@ -20,8 +23,11 @@ spring:
         jdbc:
           time_zone: Asia/Kolkata
         default_batch_fetch_size: 50
+        default_schema: ${DB_SCHEMA:public}
   flyway:
     locations: classpath:db/migration
+    # Created on first start if it doesn't exist; the migration history lives there too.
+    schemas: ${DB_SCHEMA:public}
   jackson:
     time-zone: Asia/Kolkata
     default-property-inclusion: always

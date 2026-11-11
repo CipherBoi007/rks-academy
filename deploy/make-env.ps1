@@ -87,6 +87,7 @@ DB_URL=$jdbc
 DB_USERNAME=$dbUser
 DB_PASSWORD=$dbPassword
 DB_POOL_SIZE=5
+DB_SCHEMA=rks
 APP_JWT_SECRET=$($keys["JWT_SECRET"])
 APP_PROXY_KEY=$($keys["PROXY_KEY"])
 APP_FRONTEND_ORIGIN=$vercelUrl
@@ -132,6 +133,7 @@ cd /d "$backend"
 call mvn -q -DskipTests package || exit /b 1
 set "DB_URL=$jdbc"
 set "DB_USERNAME=$dbUser"
+set "DB_SCHEMA=rks"
 set "DB_PASSWORD=$($dbPassword.Replace('%', '%%'))"
 set "APP_JWT_SECRET=$($keys["JWT_SECRET"])"
 java -jar target\rks-academy.jar --setup-owner --name="$ownerName" --mobile=$ownerMobile --server.port=0
