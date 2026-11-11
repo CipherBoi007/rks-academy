@@ -91,7 +91,7 @@ export function FamilyLoginForm() {
 
   if (step === "mobile") {
     return (
-      <form onSubmit={requestCode} noValidate className="mt-8 space-y-5">
+      <form onSubmit={requestCode} noValidate className="mt-5 space-y-4 short:mt-3 short:space-y-3 md:mt-8 md:space-y-5">
         <Field id="family-mobile" label="Mobile number">
           <Input
             id="family-mobile"
@@ -116,7 +116,7 @@ export function FamilyLoginForm() {
   }
 
   return (
-    <form onSubmit={verify} noValidate className="mt-8 space-y-5">
+    <form onSubmit={verify} noValidate className="mt-5 space-y-4 short:mt-3 short:space-y-3 md:mt-8 md:space-y-5">
       <p className="rounded-xl bg-surface px-4 py-3 text-[15px] text-ink/80">{sent?.message}</p>
       {sent?.devCode && (
         <p className="rounded-xl border border-dashed border-primary/40 bg-primary-50 px-4 py-3 text-sm text-primary-700">

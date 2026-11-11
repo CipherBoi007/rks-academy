@@ -12,6 +12,8 @@ const config: Config = {
   content: ["./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
+      // Short phones (e.g. 360x640): lets one-screen layouts like sign-in tighten up instead of scrolling.
+      screens: { short: { raw: "(max-width: 767px) and (max-height: 700px)" } },
       colors,
       fontFamily: {
         display: ["var(--font-oswald)", "Bebas Neue", "sans-serif"],
