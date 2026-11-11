@@ -219,9 +219,9 @@ npm run dev
 
 | Role | Mobile | PIN |
 |---|---|---|
-| Owner (R. Sethupathi) | `9000000000` | `1234` |
-| Coach (S. Divya) | `9000000001` | `1234` |
-| Coach (M. Anand) | `9000000002` | `1234` |
+| Owner (R. Sethupathi) | `9000000000` | `123456` |
+| Coach (S. Divya) | `9000000001` | `123456` |
+| Coach (M. Anand) | `9000000002` | `123456` |
 
 **Family app in dev:** open `/family/login` and enter `9000000101` (Aravind Murugan's parent). For a family with two children use `9000020001`; for three, use `9000020002`. In dev, WhatsApp only logs messages, so **the sign-in screen shows the code** for you to type in.
 
@@ -287,11 +287,13 @@ Requesting a family code (`/api/v1/family/auth/request-code`) sets no cookie, so
 
 ### Staff (owner, coach): mobile + PIN
 
-1. `POST /api/v1/auth/login` with `{ mobile, pin }`. The mobile is 10 digits; the PIN is 4–6 digits, stored hashed.
+1. `POST /api/v1/auth/login` with `{ mobile, pin }`. The mobile is 10 digits; the PIN is **6 to 12 digits**, stored hashed (BCrypt).
 2. **Lockout:** after **5 wrong PINs** a mobile number is locked for **5 minutes** (`LoginAttemptLimiter`). It counts per mobile number, not per IP, so the proxy hiding client IPs doesn't weaken it.
 3. On success the API returns a JWT. `sub` is the user id, `tv` is the user's **token version**, and the token is signed with `APP_JWT_SECRET` and lasts `APP_JWT_TTL` (default 12h).
 4. **Forced PIN change:** new logins, PIN resets and the production owner setup all issue a **one-time PIN**. Until it is changed, the user only gets the authority `PIN_CHANGE_REQUIRED`, so only `GET /auth/me` and `POST /auth/change-pin` work. The UI sends them to `/change-pin`.
-5. **Weak PINs are refused** when a user picks one (`PinPolicy`): `1234`, `0000`, straight sequences like `3456` or `9876`, and a few other common ones. The dev seed uses 1234 only because seeded PINs bypass that check.
+5. **PIN length is 6 to 12 digits.** One-time PINs are 6 digits.
+   - A PIN set **before** the 6-digit minimum (4 or 5 digits) still signs in **once**. The API then sets `must_change_pin`, so the user has to choose a new 6–12 digit PIN before anything else works. Nobody is locked out by the rule change.
+6. **Weak PINs are refused** when a user picks one (`PinPolicy`): one digit repeated (`111111`), straight sequences (`123456`, `987654`), and common patterns (`121212`, `112233`, `123123`, …). The dev seed uses `123456` only because seeded PINs bypass that check (set by the dev-only migration `db/demo/V6_1`).
 
 ### Session revocation: the token version
 
@@ -459,6 +461,7 @@ The schema is created and evolved **only** by Flyway scripts, which run automati
 | `V5__family_portal.sql` | `parent_account`, `login_code` |
 | `V6__stored_files_and_rls.sql` | `stored_file` (uploaded images), and **row-level security switched on** for every table |
 | `db/demo/V2_1 … V2_5` | **Dev only:** demo staff logins, players, payments, attendance, products |
+| `db/demo/V6_1` | **Dev only:** moves the demo logins' PIN from `1234` to `123456` (PINs became 6–12 digits) |
 
 **Tables:** `court`, `coach`, `admin_user`, `batch`, `fee_plan`, `fee_plan_perk`, `fee_policy`, `player`, `player_level_history`, `player_skill`, `attendance_record`, `payment`, `receipt_sequence`, `product`, `product_image`, `product_spec`, `product_variant`, `fee_reminder`, `parent_account`, `login_code`, `stored_file`, plus Flyway's own `flyway_schema_history`.
 

@@ -7,7 +7,7 @@ test("login rejects a wrong PIN and redirects signed-out visitors", async ({ pag
   await page.goto("/players");
   await expect(page).toHaveURL(/\/login\?next=%2Fplayers/);
   await page.getByLabel("Mobile number").fill(OWNER.mobile);
-  await page.getByLabel("PIN").fill("9999");
+  await page.getByLabel("PIN").fill("999999");
   await page.getByRole("button", { name: "Enter academy" }).click();
   await expect(page.getByText("Mobile number or PIN is incorrect")).toBeVisible();
 });

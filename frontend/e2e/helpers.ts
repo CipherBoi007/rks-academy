@@ -1,7 +1,7 @@
 import { expect, type Page } from "@playwright/test";
 
-export const OWNER = { mobile: "9000000000", pin: "1234" };
-export const COACH = { mobile: "9000000001", pin: "1234" };
+export const OWNER = { mobile: "9000000000", pin: "123456" };
+export const COACH = { mobile: "9000000001", pin: "123456" };
 
 export async function signIn(page: Page, who: { mobile: string; pin: string }) {
   await page.goto("/login");

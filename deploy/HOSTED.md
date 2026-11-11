@@ -116,7 +116,7 @@ Remove-Item Env:DB_PASSWORD, Env:DB_URL, Env:DB_USERNAME, Env:APP_JWT_SECRET
 
 - It prints a **one-time PIN**. Sign in with it and you'll be asked to set your own.
 - It refuses to run if an owner already exists.
-- Production never has the demo data or the dev login (9000000000 / 1234).
+- Production never has the demo data or the dev login (9000000000 / 123456).
 
 ## 6. Vercel: the web app
 

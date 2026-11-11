@@ -17,7 +17,7 @@ import { EmptyState, ErrorState, Skeleton } from "@/components/ui/States";
 import { useToast } from "@/components/ui/Toast";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/cn";
-import { applyServerErrors } from "@/lib/forms";
+import { MOBILE, applyServerErrors, cleaned } from "@/lib/forms";
 import { formatMobile, formatTimeRange, LEVEL_LABEL, LEVELS } from "@/lib/format";
 import { keys, useAdminBatches, useAdminCourts, useCoaches } from "@/lib/queries";
 import type { Batch, CoachAdmin, CourtAdmin, DayOfWeek, Level } from "@/lib/types";
@@ -443,7 +443,7 @@ function CoachSheet({ open, coach, onClose }: { open: boolean; coach?: CoachAdmi
           <Input id="coach-title" placeholder="e.g. Junior Coach" {...register("title")} />
         </Field>
         <Field id="coach-mobile" label="Mobile" error={errors.mobile?.message}>
-          <Input id="coach-mobile" type="tel" inputMode="numeric" maxLength={10} invalid={Boolean(errors.mobile)} {...register("mobile")} />
+          <Input id="coach-mobile" type="tel" inputMode="numeric" invalid={Boolean(errors.mobile)} {...cleaned(register("mobile"), MOBILE)} />
         </Field>
         {coach && (
           <Controller

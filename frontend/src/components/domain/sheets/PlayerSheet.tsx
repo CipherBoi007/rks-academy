@@ -14,7 +14,7 @@ import { Sheet } from "@/components/ui/Sheet";
 import { useToast } from "@/components/ui/Toast";
 import { api, errorMessage } from "@/lib/api";
 import { prepareImage } from "@/lib/images";
-import { applyServerErrors, blankToUndefined } from "@/lib/forms";
+import { MOBILE, applyServerErrors, blankToUndefined, cleaned } from "@/lib/forms";
 import { GENDER_LABEL, LEVEL_LABEL, LEVELS } from "@/lib/format";
 import { keys, useAllPlayers, useBatches, useConfig, usePlans } from "@/lib/queries";
 import type { Gender, Level, PlayerDetail, PlayerInput } from "@/lib/types";
@@ -262,10 +262,9 @@ export function PlayerSheet({ open, onClose, player }: { open: boolean; onClose:
               id="parentMobile"
               type="tel"
               inputMode="numeric"
-              maxLength={10}
               placeholder="10 digits"
               invalid={Boolean(errors.parentMobile)}
-              {...register("parentMobile")}
+              {...cleaned(register("parentMobile"), MOBILE)}
             />
           </Field>
           <Field id="parentOccupation" label="Occupation">

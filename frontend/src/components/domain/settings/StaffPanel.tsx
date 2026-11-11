@@ -16,7 +16,7 @@ import { Sheet } from "@/components/ui/Sheet";
 import { EmptyState, ErrorState, Skeleton } from "@/components/ui/States";
 import { useToast } from "@/components/ui/Toast";
 import { api, errorMessage } from "@/lib/api";
-import { applyServerErrors } from "@/lib/forms";
+import { MOBILE, applyServerErrors, cleaned } from "@/lib/forms";
 import { formatMobile } from "@/lib/format";
 import { keys, useCoaches, useMe, useStaff } from "@/lib/queries";
 import type { Role, Staff, StaffWithPin } from "@/lib/types";
@@ -194,7 +194,7 @@ function StaffSheet({
           <Input id="staff-name" invalid={Boolean(errors.name)} {...register("name")} />
         </Field>
         <Field id="staff-mobile" label="Mobile number" error={errors.mobile?.message} hint={staff ? "Mobile numbers can't be changed." : undefined}>
-          <Input id="staff-mobile" type="tel" inputMode="numeric" maxLength={10} disabled={Boolean(staff)} invalid={Boolean(errors.mobile)} {...register("mobile")} />
+          <Input id="staff-mobile" type="tel" inputMode="numeric" disabled={Boolean(staff)} invalid={Boolean(errors.mobile)} {...cleaned(register("mobile"), MOBILE)} />
         </Field>
         <Field id="staff-role" label="Role" hint={isSelf ? "You can't change your own role." : "Owners see fees and manage settings."}>
           <Select id="staff-role" disabled={isSelf} {...register("role")}>

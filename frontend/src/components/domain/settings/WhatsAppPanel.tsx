@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Card, CardTitle } from "@/components/ui/Card";
 import { Field, Input } from "@/components/ui/Field";
 import { ErrorState, Skeleton } from "@/components/ui/States";
+import { mobileDigits } from "@/lib/forms";
 import { api, errorMessage } from "@/lib/api";
 import { useWhatsAppStatus } from "@/lib/queries";
 import type { WhatsAppTestResult } from "@/lib/types";
@@ -76,10 +77,9 @@ export function WhatsAppPanel() {
               id="wa-test"
               type="tel"
               inputMode="numeric"
-              maxLength={10}
               prefix="+91"
               value={mobile}
-              onChange={(e) => setMobile(e.target.value.replace(/\D/g, ""))}
+              onChange={(e) => setMobile(mobileDigits(e.target.value))}
               invalid={touched && !valid}
             />
           </Field>

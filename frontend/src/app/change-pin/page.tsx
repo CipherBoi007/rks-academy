@@ -13,12 +13,17 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Field, Input } from "@/components/ui/Field";
 import { useToast } from "@/components/ui/Toast";
+import { PIN, cleaned } from "@/lib/forms";
 import { keys } from "@/lib/queries";
 import type { ApiErrorBody } from "@/lib/types";
 
-const pin = z.string().regex(/^\d{4,6}$/, "PIN is 4 to 6 digits");
+// The current PIN may be an older 4-5 digit one; the new PIN must be 6 to 12 digits.
 const schema = z
-  .object({ currentPin: pin, newPin: pin, confirm: z.string() })
+  .object({
+    currentPin: z.string().regex(/^\d{4,12}$/, "Enter your current PIN"),
+    newPin: z.string().regex(/^\d{6,12}$/, "PIN is 6 to 12 digits"),
+    confirm: z.string(),
+  })
   .refine((v) => v.newPin === v.confirm, { path: ["confirm"], message: "PINs don't match" })
   .refine((v) => v.newPin !== v.currentPin, { path: ["newPin"], message: "Choose a different PIN" });
 
@@ -60,16 +65,16 @@ export default function ChangePinPage() {
       <Card className="w-full max-w-md p-6 sm:p-8">
         <Image src="/brand/crest.png" alt="" width={72} height={72} className="mx-auto h-[72px] w-[72px]" />
         <h1 className="mt-4 text-center font-display text-3xl font-bold uppercase">Set a new PIN</h1>
-        <p className="mt-1 text-center text-muted">Avoid easy PINs like 1111 or 1234.</p>
+        <p className="mt-1 text-center text-muted">6 to 12 digits. Avoid easy ones like 111111 or 123456.</p>
         <form onSubmit={handleSubmit(onSubmit)} noValidate className="mt-6 space-y-4">
           <Field id="currentPin" label="Current PIN" error={errors.currentPin?.message}>
-            <Input id="currentPin" type="password" inputMode="numeric" maxLength={6} autoComplete="current-password" invalid={Boolean(errors.currentPin)} {...register("currentPin")} />
+            <Input id="currentPin" type="password" inputMode="numeric" maxLength={12} autoComplete="current-password" invalid={Boolean(errors.currentPin)} {...cleaned(register("currentPin"), PIN)} />
           </Field>
           <Field id="newPin" label="New PIN" error={errors.newPin?.message}>
-            <Input id="newPin" type="password" inputMode="numeric" maxLength={6} autoComplete="new-password" invalid={Boolean(errors.newPin)} {...register("newPin")} />
+            <Input id="newPin" type="password" inputMode="numeric" maxLength={12} autoComplete="new-password" invalid={Boolean(errors.newPin)} {...cleaned(register("newPin"), PIN)} />
           </Field>
           <Field id="confirm" label="Confirm new PIN" error={errors.confirm?.message}>
-            <Input id="confirm" type="password" inputMode="numeric" maxLength={6} autoComplete="new-password" invalid={Boolean(errors.confirm)} {...register("confirm")} />
+            <Input id="confirm" type="password" inputMode="numeric" maxLength={12} autoComplete="new-password" invalid={Boolean(errors.confirm)} {...cleaned(register("confirm"), PIN)} />
           </Field>
           {error && (
             <p role="alert" className="rounded-xl bg-alert-50 px-4 py-3 text-sm font-medium text-alert-700">

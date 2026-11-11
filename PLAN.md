@@ -175,7 +175,7 @@ The word "Student" does not appear anywhere: entity names, DTOs, endpoints, seed
 ## 5. Seed data (taken from the screenshots)
 
 - **Demo vs reference data:** `db/migration` holds the schema plus reference data: courts, coaches, batches, fee plans and the policy. The demo data (players, payments, attendance, products and logins) lives in `db/demo`, and Flyway loads it **only in the `dev` profile**.
-- **Dev-only logins:** Owner R. Sethupathi `9000000000` / `1234`, and coaches S. Divya `9000000001` and M. Anand `9000000002`, also with PIN `1234`.
+- **Dev-only logins:** Owner R. Sethupathi `9000000000` / `123456`, and coaches S. Divya `9000000001` and M. Anand `9000000002`, also with PIN `123456`. (Originally `1234`; changed when PINs became 6 to 12 digits.)
 - **WhatsApp:** `APP_WHATSAPP_NUMBER`, default placeholder `910000000000`, exposed through `GET /config/public`. The login placeholder is `+91 00000 00000`.
 - **Images:** players have no photos (`photo_url` is NULL and the initials avatar is used). `POST /players/{id}/photo` uploads to `APP_UPLOAD_DIR`. Product and banner images are crops saved under `frontend/public/demo/`.
 - **Courts:** Court 1 (Wooden synthetic), Court 2 (BWF synthetic mat), Court 3 (Wooden synthetic), Court 4 (BWF synthetic mat).

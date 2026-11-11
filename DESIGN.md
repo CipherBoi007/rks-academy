@@ -117,7 +117,7 @@ lucide-react, 20px, stroke 1.75. Mapping: Dashboard `LayoutGrid`, Players `Users
 
 ### 3.1 Login
 - A split screen, 50/50. **Left:** a full-bleed badminton photo with a `primary` multiply tint and a gradient to `navy` at the bottom. Bottom-left copy: the eyebrow "EST. RAMANATHAPURAM" (`accent`, tracking 0.25em), then the headline "TRAIN HARD. **PLAY PROUD.**" (Oswald 56px, white with the last two words in `accent`), then "4 courts · 6 batches · 3 coaches — one place to run the academy." (white/80).
-- **Right:** a white panel with the content centred at max-w 380px: the crest (about 190px), "RAJA KUMARAN SETHUPATHI SPORTS ACADEMY" (Oswald 700 32px ink, centred), "Ramanathapuram · Admin console" (muted), the MOBILE NUMBER field (`Phone` icon, +91 prefix), the PIN field (`Lock` icon, masked, 4–6 digits), and a full-width "Enter academy →" primary button with the hard shadow.
+- **Right:** a white panel with the content centred at max-w 380px: the crest (about 190px), "RAJA KUMARAN SETHUPATHI SPORTS ACADEMY" (Oswald 700 32px ink, centred), "Ramanathapuram · Admin console" (muted), the MOBILE NUMBER field (`Phone` icon, +91 prefix), the PIN field (`Lock` icon, masked, 6–12 digits), and a full-width "Enter academy →" primary button with the hard shadow.
 - The caption "Prototype — any input works." is **replaced** by real auth errors. Optionally a "Forgot PIN? Contact the owner." line.
 
 ### 3.2 Dashboard

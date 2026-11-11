@@ -63,8 +63,8 @@ class ApiIT {
 
     @BeforeAll
     void signIn() throws Exception {
-        owner = login("9000000000", "1234").get("token").asText();
-        coach = login("9000000001", "1234").get("token").asText();
+        owner = login("9000000000", "123456").get("token").asText();
+        coach = login("9000000001", "123456").get("token").asText();
     }
 
     @Test
@@ -232,14 +232,32 @@ class ApiIT {
         assertThat(json.readTree(blocked.getBody()).get("code").asText()).isEqualTo("PIN_CHANGE_REQUIRED");
 
         assertThat(call(temp, HttpMethod.POST, "/auth/change-pin",
-                Map.of("currentPin", "482913", "newPin", "1234")).getStatusCode())
-                .isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+                Map.of("currentPin", "482913", "newPin", "123456")).getStatusCode())
+                .isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY); // weak
+        assertThat(call(temp, HttpMethod.POST, "/auth/change-pin",
+                Map.of("currentPin", "482913", "newPin", "73051")).getStatusCode())
+                .isEqualTo(HttpStatus.BAD_REQUEST); // shorter than 6 digits
+        assertThat(call(temp, HttpMethod.POST, "/auth/change-pin",
+                Map.of("currentPin", "482913", "newPin", "7305190462813")).getStatusCode())
+                .isEqualTo(HttpStatus.BAD_REQUEST); // longer than 12 digits
 
         JsonNode changed = json.readTree(call(temp, HttpMethod.POST, "/auth/change-pin",
-                Map.of("currentPin", "482913", "newPin", "7305")).getBody());
+                Map.of("currentPin", "482913", "newPin", "730519")).getBody());
         assertThat(changed.get("mustChangePin").asBoolean()).isFalse();
         assertThat(call(changed.get("token").asText(), HttpMethod.GET, "/players", null).getStatusCode())
                 .isEqualTo(HttpStatus.OK);
+
+        // A PIN set before the 6-digit minimum still signs in once, but must be replaced before anything else works.
+        AdminUser legacy = new AdminUser();
+        legacy.setName("Legacy Login");
+        legacy.setMobile("9111111112");
+        legacy.setRole(AdminUser.Role.OWNER);
+        legacy.setPinHash(encoder.encode("4826"));
+        users.save(legacy);
+        JsonNode old = login("9111111112", "4826");
+        assertThat(old.get("mustChangePin").asBoolean()).isTrue();
+        assertThat(call(old.get("token").asText(), HttpMethod.GET, "/players", null).getStatusCode())
+                .isEqualTo(HttpStatus.FORBIDDEN);
     }
 
     @Test
@@ -277,7 +295,7 @@ class ApiIT {
         String first = login("9333333333", tempPin).get("token").asText();
         assertThat(call(first, HttpMethod.GET, "/players", null).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
         String coachToken = json.readTree(call(first, HttpMethod.POST, "/auth/change-pin",
-                Map.of("currentPin", tempPin, "newPin", "5820")).getBody()).get("token").asText();
+                Map.of("currentPin", tempPin, "newPin", "582039")).getBody()).get("token").asText();
         assertThat(call(coachToken, HttpMethod.GET, "/players", null).getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(call(coachToken, HttpMethod.GET, "/dues", null).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
 
@@ -390,7 +408,8 @@ class ApiIT {
         long id = json.readTree(call(owner, HttpMethod.POST, "/products", product).getBody()).get("id").asLong();
 
         product.put("images", List.of("https://evil.example/x.png"));
-        assertThat(call(owner, HttpMethod.POST, "/products", product).getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        ResponseEntity<String> linked = call(owner, HttpMethod.POST, "/products", product);
+        assertThat(linked.getStatusCode()).as(linked.getBody()).isEqualTo(HttpStatus.BAD_REQUEST);
 
         call(owner, HttpMethod.DELETE, "/products/" + id, null);
         assertThat(get(owner, "/products?q=Kit Bag").get("totalElements").asInt()).isZero();

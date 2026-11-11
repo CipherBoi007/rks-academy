@@ -30,13 +30,14 @@ class SmallRulesTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"1234", "0000", "9999", "123456", "4321", "5678", "987654"})
+    @ValueSource(strings = {"1234", "0000", "9999", "123456", "4321", "5678", "987654", "000000", "121212",
+            "1234567890", "987654321", "112233"})
     void weakPins(String pin) {
         assertThat(PinPolicy.isWeak(pin)).isTrue();
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"4729", "1357", "802615", "2468"})
+    @ValueSource(strings = {"4729", "1357", "802615", "2468", "730519", "58203917"})
     void acceptablePins(String pin) {
         assertThat(PinPolicy.isWeak(pin)).isFalse();
     }

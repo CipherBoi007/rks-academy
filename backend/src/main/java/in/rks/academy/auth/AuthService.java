@@ -31,7 +31,11 @@ public class AuthService {
         this.limiter = limiter;
     }
 
-    @Transactional(readOnly = true)
+    /**
+     * Signs a staff user in. A PIN shorter than {@link PinPolicy#MIN_LENGTH}, set before 6 digits became the minimum,
+     * still works once: the user is then made to choose a new 6 to 12 digit PIN before they can do anything else.
+     */
+    @Transactional
     public LoginResponse login(String mobile, String pin) {
         if (limiter.isLocked(mobile)) {
             throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "LOCKED",
@@ -43,6 +47,9 @@ public class AuthService {
             throw BAD_CREDENTIALS;
         }
         limiter.recordSuccess(mobile);
+        if (pin.length() < PinPolicy.MIN_LENGTH) {
+            user.setMustChangePin(true);
+        }
         return respond(user);
     }
 
@@ -61,7 +68,7 @@ public class AuthService {
             throw ApiException.rule("PIN_UNCHANGED", "Choose a PIN different from the current one");
         }
         if (PinPolicy.isWeak(newPin)) {
-            throw ApiException.rule("PIN_TOO_WEAK", "Avoid repeated or sequential digits like 1111 or 1234");
+            throw ApiException.rule("PIN_TOO_WEAK", "Avoid easy PINs like 111111, 123456 or 121212");
         }
         user.setPinHash(encoder.encode(newPin));
         user.setMustChangePin(false);

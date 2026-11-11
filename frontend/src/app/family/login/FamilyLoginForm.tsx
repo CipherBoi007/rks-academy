@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "rea
 import { ArrowRight, KeyRound, MessageCircle, Phone } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Field, Input } from "@/components/ui/Field";
+import { digitsOnly, mobileDigits } from "@/lib/forms";
 import { api, errorMessage } from "@/lib/api";
 import type { CodeRequested } from "@/lib/family";
 import { formatMobile } from "@/lib/format";
@@ -102,12 +103,11 @@ export function FamilyLoginForm({ intro }: { intro?: ReactNode }) {
               type="tel"
               inputMode="numeric"
               autoComplete="tel-national"
-              maxLength={10}
               placeholder="00000 00000"
               prefix="+91"
               icon={<Phone className="h-5 w-5" />}
               value={mobile}
-              onChange={(e) => setMobile(e.target.value.replace(/\D/g, "").slice(0, 10))}
+              onChange={(e) => setMobile(mobileDigits(e.target.value))}
               invalid={Boolean(error)}
             />
           </Field>
@@ -141,7 +141,7 @@ export function FamilyLoginForm({ intro }: { intro?: ReactNode }) {
           placeholder="••••••"
           icon={<KeyRound className="h-5 w-5" />}
           value={code}
-          onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+          onChange={(e) => setCode(digitsOnly(e.target.value, 6))}
           invalid={Boolean(error)}
           className="text-lg tracking-[0.4em]"
         />

@@ -8,6 +8,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/Button";
 import { Field, Input } from "@/components/ui/Field";
+import { MOBILE, PIN, cleaned } from "@/lib/forms";
 import type { ApiErrorBody, LoginResult } from "@/lib/types";
 
 const schema = z.object({
@@ -15,7 +16,8 @@ const schema = z.object({
     .string()
     .transform((v) => v.replace(/\D/g, "").replace(/^91(?=\d{10}$)/, ""))
     .pipe(z.string().regex(/^\d{10}$/, "Enter your 10-digit mobile number")),
-  pin: z.string().regex(/^\d{4,6}$/, "PIN is 4 to 6 digits"),
+  // 4-5 digits still accepted: PINs set before the 6-digit minimum sign in once, then must be changed.
+  pin: z.string().regex(/^\d{4,12}$/, "Enter your PIN (6 to 12 digits)"),
 });
 
 type FormIn = z.input<typeof schema>;
@@ -69,7 +71,7 @@ export function LoginForm() {
           prefix="+91"
           icon={<Phone className="h-5 w-5" />}
           invalid={Boolean(errors.mobile)}
-          {...register("mobile")}
+          {...cleaned(register("mobile"), MOBILE)}
         />
       </Field>
       <Field id="pin" label="PIN" error={errors.pin?.message}>
@@ -78,11 +80,11 @@ export function LoginForm() {
           type="password"
           inputMode="numeric"
           autoComplete="current-password"
-          maxLength={6}
-          placeholder="••••"
+          maxLength={12}
+          placeholder="••••••"
           icon={<Lock className="h-5 w-5" />}
           invalid={Boolean(errors.pin)}
-          {...register("pin")}
+          {...cleaned(register("pin"), PIN)}
         />
       </Field>
       {error && (
