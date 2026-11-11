@@ -58,7 +58,7 @@ export function LoginForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate className="mt-5 space-y-4 short:mt-3 short:space-y-3 md:mt-8 md:space-y-5">
+    <form onSubmit={handleSubmit(onSubmit)} noValidate className="mt-5 space-y-4 short:mt-3 short:space-y-3 tall:mt-8 tall:space-y-5 md:mt-8 md:space-y-5">
       <Field id="mobile" label="Mobile number" error={errors.mobile?.message}>
         <Input
           id="mobile"

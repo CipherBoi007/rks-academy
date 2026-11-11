@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { ArrowRight, KeyRound, MessageCircle, Phone } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Field, Input } from "@/components/ui/Field";
@@ -15,8 +15,11 @@ function safeNext(next: string | null) {
   return next && next.startsWith("/family") && !next.startsWith("//") ? next : "/family";
 }
 
-/** Two steps: the parent's mobile number, then the 6-digit code that arrives on WhatsApp. */
-export function FamilyLoginForm() {
+/**
+ * Two steps: the parent's mobile number, then the 6-digit code that arrives on WhatsApp.
+ * `intro` shows under the first step only, so the code step stays focused (and fits small phones).
+ */
+export function FamilyLoginForm({ intro }: { intro?: ReactNode }) {
   const router = useRouter();
   const params = useSearchParams();
   const [step, setStep] = useState<"mobile" | "code">("mobile");
@@ -91,32 +94,35 @@ export function FamilyLoginForm() {
 
   if (step === "mobile") {
     return (
-      <form onSubmit={requestCode} noValidate className="mt-5 space-y-4 short:mt-3 short:space-y-3 md:mt-8 md:space-y-5">
-        <Field id="family-mobile" label="Mobile number">
-          <Input
-            id="family-mobile"
-            type="tel"
-            inputMode="numeric"
-            autoComplete="tel-national"
-            maxLength={10}
-            placeholder="00000 00000"
-            prefix="+91"
-            icon={<Phone className="h-5 w-5" />}
-            value={mobile}
-            onChange={(e) => setMobile(e.target.value.replace(/\D/g, "").slice(0, 10))}
-            invalid={Boolean(error)}
-          />
-        </Field>
-        {errorBox}
-        <Button type="submit" size="lg" className="w-full" loading={busy} icon={<MessageCircle className="h-5 w-5" aria-hidden />}>
-          Send code on WhatsApp
-        </Button>
-      </form>
+      <>
+        <form onSubmit={requestCode} noValidate className="mt-5 space-y-4 short:mt-3 short:space-y-3 tall:mt-8 tall:space-y-5 md:mt-8 md:space-y-5">
+          <Field id="family-mobile" label="Mobile number">
+            <Input
+              id="family-mobile"
+              type="tel"
+              inputMode="numeric"
+              autoComplete="tel-national"
+              maxLength={10}
+              placeholder="00000 00000"
+              prefix="+91"
+              icon={<Phone className="h-5 w-5" />}
+              value={mobile}
+              onChange={(e) => setMobile(e.target.value.replace(/\D/g, "").slice(0, 10))}
+              invalid={Boolean(error)}
+            />
+          </Field>
+          {errorBox}
+          <Button type="submit" size="lg" className="w-full" loading={busy} icon={<MessageCircle className="h-5 w-5" aria-hidden />}>
+            Send code on WhatsApp
+          </Button>
+        </form>
+        {intro}
+      </>
     );
   }
 
   return (
-    <form onSubmit={verify} noValidate className="mt-5 space-y-4 short:mt-3 short:space-y-3 md:mt-8 md:space-y-5">
+    <form onSubmit={verify} noValidate className="mt-5 space-y-4 short:mt-3 short:space-y-3 tall:mt-8 tall:space-y-5 md:mt-8 md:space-y-5">
       <p className="rounded-xl bg-surface px-4 py-3 text-[15px] text-ink/80">{sent?.message}</p>
       {sent?.devCode && (
         <p className="rounded-xl border border-dashed border-primary/40 bg-primary-50 px-4 py-3 text-sm text-primary-700">

@@ -13,7 +13,11 @@ const config: Config = {
   theme: {
     extend: {
       // Short phones (e.g. 360x640): lets one-screen layouts like sign-in tighten up instead of scrolling.
-      screens: { short: { raw: "(max-width: 767px) and (max-height: 700px)" } },
+      // Tall phones (e.g. 390x844): room to make one-screen layouts roomier instead of leaving empty space.
+      screens: {
+        short: { raw: "(max-width: 767px) and (max-height: 700px)" },
+        tall: { raw: "(max-width: 767px) and (min-height: 780px)" },
+      },
       colors,
       fontFamily: {
         display: ["var(--font-oswald)", "Bebas Neue", "sans-serif"],

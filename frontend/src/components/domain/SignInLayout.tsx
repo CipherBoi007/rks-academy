@@ -24,7 +24,8 @@ export function SignInLayout({
 }) {
   return (
     <div className="flex min-h-dvh flex-col bg-white md:flex-row">
-      <section className="relative h-[22dvh] min-h-[140px] max-h-[220px] shrink-0 short:h-[104px] short:min-h-0 overflow-hidden bg-navy md:h-auto md:max-h-none md:min-h-dvh md:w-1/2">
+      {/* Phones: the banner is only as tall as its text. md and up: the photo fills the left half. */}
+      <section className="relative shrink-0 overflow-hidden bg-navy md:min-h-dvh md:w-1/2">
         <Image
           src="/demo/banners/login-court.jpg"
           alt=""
@@ -34,7 +35,7 @@ export function SignInLayout({
           className="object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-b from-primary/60 via-primary/70 to-navy" aria-hidden />
-        <div className="absolute inset-x-0 bottom-0 p-4 sm:p-8 md:p-12">
+        <div className="relative px-4 pb-9 pt-5 short:pb-7 short:pt-4 tall:pb-11 tall:pt-7 sm:p-8 md:absolute md:inset-x-0 md:bottom-0 md:p-12">
           <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-accent md:text-xs">{eyebrow}</p>
           <h1 className="mt-1.5 font-display text-[28px] font-bold uppercase leading-[0.95] text-white short:text-2xl sm:text-4xl md:mt-3 md:text-6xl">
             {headline}
@@ -43,7 +44,8 @@ export function SignInLayout({
         </div>
       </section>
 
-      <section className="flex flex-1 items-start justify-center px-4 py-5 short:py-3 md:items-center md:px-8 md:py-12">
+      {/* Centred in the space left, so a short form doesn't leave one big gap at the bottom. */}
+      <section className="relative z-10 -mt-4 flex flex-1 items-center justify-center rounded-t-3xl bg-white px-4 py-6 short:py-3 md:mt-0 md:rounded-none md:px-8 md:py-12">
         <div className="w-full max-w-[400px]">
           <div className="text-center">
             <Image
@@ -52,13 +54,13 @@ export function SignInLayout({
               width={190}
               height={190}
               priority
-              className="mx-auto h-16 w-16 short:h-12 short:w-12 md:h-[170px] md:w-[170px]"
+              className="mx-auto h-16 w-16 short:h-12 short:w-12 tall:h-24 tall:w-24 md:h-[170px] md:w-[170px]"
             />
-            <h2 className="mt-2 font-display text-xl font-bold uppercase leading-tight md:mt-4 md:text-[32px]">{title}</h2>
-            <p className="mt-0.5 text-sm text-muted md:mt-1 md:text-base">{subtitle}</p>
+            <h2 className="mt-2 font-display text-xl font-bold uppercase leading-tight tall:mt-3 tall:text-2xl md:mt-4 md:text-[32px]">{title}</h2>
+            <p className="mt-0.5 text-sm text-muted tall:mt-1 tall:text-base md:mt-1 md:text-base">{subtitle}</p>
           </div>
           {children}
-          <p className="mt-5 text-center text-sm text-muted short:mt-3 md:mt-8">{footer}</p>
+          <p className="mt-5 text-center text-sm text-muted short:mt-3 tall:mt-8 md:mt-8">{footer}</p>
         </div>
       </section>
     </div>
