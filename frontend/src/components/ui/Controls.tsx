@@ -80,10 +80,13 @@ export function Switch({
         onClick={() => onChange(!checked)}
         className={cn("relative h-7 w-12 shrink-0 rounded-full transition-colors", checked ? "bg-primary" : "bg-line")}
       >
+        {/* Anchored at left-1 (a button centres its content, so without it the knob starts mid-track and
+            overshoots when on). Off: 4px from the left. On: 48 - 20 - 4 = 24px, i.e. translate 20px. */}
         <span
+          aria-hidden
           className={cn(
-            "absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-transform",
-            checked ? "translate-x-6" : "translate-x-1",
+            "absolute left-1 top-1 h-5 w-5 rounded-full bg-white shadow transition-transform",
+            checked ? "translate-x-5" : "translate-x-0",
           )}
         />
       </button>

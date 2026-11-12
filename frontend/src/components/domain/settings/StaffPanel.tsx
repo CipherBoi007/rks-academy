@@ -59,13 +59,8 @@ export function StaffPanel() {
 
   return (
     <div className="space-y-4">
-      {/* Phones: the button stays top-right beside the text instead of wrapping below it. */}
-      <div className="flex items-start justify-between gap-3 sm:flex-wrap sm:items-center">
-        <p className="max-w-xl text-[15px] text-muted">
-          Everyone signs in with their mobile number and a PIN. New logins get a one-time PIN they must change at
-          first sign-in. Coaches never see fee amounts.
-        </p>
-        <Button className="shrink-0" icon={<UserPlus className="h-5 w-5" aria-hidden />} onClick={() => setEditing({ open: true })}>
+      <div className="flex justify-end">
+        <Button icon={<UserPlus className="h-5 w-5" aria-hidden />} onClick={() => setEditing({ open: true })}>
           Add login
         </Button>
       </div>
