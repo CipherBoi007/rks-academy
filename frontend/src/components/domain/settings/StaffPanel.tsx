@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Copy, KeyRound, Pencil, UserPlus } from "lucide-react";
@@ -35,8 +36,17 @@ export function StaffPanel() {
   const { data: me } = useMe();
   const toast = useToast();
   const queryClient = useQueryClient();
-  const [editing, setEditing] = useState<{ open: boolean; staff?: Staff }>({ open: false });
+  const [editing, setEditing] = useState<{ open: boolean; staff?: Staff; coachId?: number }>({ open: false });
   const [issued, setIssued] = useState<StaffWithPin | null>(null);
+  const router = useRouter();
+  const addLoginFor = useSearchParams().get("addLogin");
+
+  // "Create login" on the Coaches tab lands here with ?addLogin=<coachId>: open the form already filled in.
+  useEffect(() => {
+    if (!addLoginFor) return;
+    setEditing({ open: true, coachId: Number(addLoginFor) });
+    router.replace("/settings", { scroll: false });
+  }, [addLoginFor, router]);
 
   const reset = useMutation({
     mutationFn: (id: number) => api<StaffWithPin>(`/staff/${id}/reset-pin`, { method: "POST" }),
@@ -49,12 +59,13 @@ export function StaffPanel() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      {/* Phones: the button stays top-right beside the text instead of wrapping below it. */}
+      <div className="flex items-start justify-between gap-3 sm:flex-wrap sm:items-center">
         <p className="max-w-xl text-[15px] text-muted">
           Everyone signs in with their mobile number and a PIN. New logins get a one-time PIN they must change at
           first sign-in. Coaches never see fee amounts.
         </p>
-        <Button icon={<UserPlus className="h-5 w-5" aria-hidden />} onClick={() => setEditing({ open: true })}>
+        <Button className="shrink-0" icon={<UserPlus className="h-5 w-5" aria-hidden />} onClick={() => setEditing({ open: true })}>
           Add login
         </Button>
       </div>
@@ -111,6 +122,8 @@ export function StaffPanel() {
       <StaffSheet
         open={editing.open}
         staff={editing.staff}
+        presetCoachId={editing.coachId}
+        logins={staff.data ?? []}
         isSelf={editing.staff?.id === me?.id}
         onClose={() => setEditing({ open: false })}
         onIssued={setIssued}
@@ -120,15 +133,25 @@ export function StaffPanel() {
   );
 }
 
+/**
+ * Adds or edits a login. A coach's login starts from their coach profile: picking the coach fills in their name
+ * and mobile, so nothing is typed twice.
+ */
 function StaffSheet({
   open,
   staff,
+  presetCoachId,
+  logins,
   isSelf,
   onClose,
   onIssued,
 }: {
   open: boolean;
   staff?: Staff;
+  /** Opens a new login already linked to (and filled in from) this coach. */
+  presetCoachId?: number;
+  /** Existing logins, to mark coaches who already have one. */
+  logins: Staff[];
   isSelf: boolean;
   onClose: () => void;
   onIssued: (res: StaffWithPin) => void;
@@ -148,15 +171,27 @@ function StaffSheet({
 
   useEffect(() => {
     if (open) {
+      const preset = coaches.data?.find((c) => c.id === presetCoachId);
       reset({
-        name: staff?.name ?? "",
-        mobile: staff?.mobile ?? "",
+        name: staff?.name ?? preset?.name ?? "",
+        mobile: staff?.mobile ?? preset?.mobile ?? "",
         role: staff?.role ?? "COACH",
-        coachId: staff?.coachId ? String(staff.coachId) : "",
+        coachId: staff?.coachId ? String(staff.coachId) : preset ? String(preset.id) : "",
         active: staff?.active ?? true,
       });
     }
-  }, [open, staff, reset]);
+  }, [open, staff, presetCoachId, coaches.data, reset]);
+
+  /** New logins copy the picked coach's name and mobile (both can still be edited). */
+  function fillFromCoach(coachId: string) {
+    const coach = coaches.data?.find((c) => String(c.id) === coachId);
+    if (staff || !coach) return;
+    setValue("name", coach.name, { shouldValidate: Boolean(errors.name) });
+    if (coach.mobile) setValue("mobile", coach.mobile, { shouldValidate: Boolean(errors.mobile) });
+  }
+
+  const role = watch("role");
+  const linkedCoachIds = new Set(logins.filter((l) => l.id !== staff?.id && l.coachId).map((l) => l.coachId));
 
   const save = useMutation({
     mutationFn: (v: Values): Promise<Staff | StaffWithPin> => {
@@ -190,12 +225,6 @@ function StaffSheet({
       }
     >
       <form id="staff-form" noValidate onSubmit={handleSubmit((v) => save.mutate(v))} className="space-y-5">
-        <Field id="staff-name" label="Name" error={errors.name?.message}>
-          <Input id="staff-name" invalid={Boolean(errors.name)} {...register("name")} />
-        </Field>
-        <Field id="staff-mobile" label="Mobile number" error={errors.mobile?.message} hint={staff ? "Mobile numbers can't be changed." : undefined}>
-          <Input id="staff-mobile" type="tel" inputMode="numeric" disabled={Boolean(staff)} invalid={Boolean(errors.mobile)} {...cleaned(register("mobile"), MOBILE)} />
-        </Field>
         <Field id="staff-role" label="Role" hint={isSelf ? "You can't change your own role." : "Owners see fees and manage settings."}>
           <Select id="staff-role" disabled={isSelf} {...register("role")}>
             {(["COACH", "OWNER"] as Role[]).map((r) => (
@@ -205,15 +234,30 @@ function StaffSheet({
             ))}
           </Select>
         </Field>
-        <Field id="staff-coach" label="Coach profile" hint="Links the login to a coach, so they're greeted as “Coach …”.">
-          <Select id="staff-coach" {...register("coachId")}>
-            <option value="">None</option>
+        <Field
+          id="staff-coach"
+          label={role === "OWNER" ? "Also coaches as (optional)" : "Which coach is this login for?"}
+          hint={
+            staff
+              ? "Links the login to a coach, so they're greeted as “Coach …”."
+              : "Their name and mobile are filled in from the coach's profile."
+          }
+        >
+          <Select id="staff-coach" {...register("coachId", { onChange: (e) => fillFromCoach(e.target.value) })}>
+            <option value="">{role === "OWNER" ? "Doesn't coach" : "Pick a coach"}</option>
             {coaches.data?.map((c) => (
-              <option key={c.id} value={c.id}>
+              <option key={c.id} value={c.id} disabled={linkedCoachIds.has(c.id)}>
                 {c.name}
+                {linkedCoachIds.has(c.id) ? " (has a login)" : ""}
               </option>
             ))}
           </Select>
+        </Field>
+        <Field id="staff-name" label="Name" error={errors.name?.message}>
+          <Input id="staff-name" invalid={Boolean(errors.name)} {...register("name")} />
+        </Field>
+        <Field id="staff-mobile" label="Mobile number" error={errors.mobile?.message} hint={staff ? "Mobile numbers can't be changed." : undefined}>
+          <Input id="staff-mobile" type="tel" inputMode="numeric" disabled={Boolean(staff)} invalid={Boolean(errors.mobile)} {...cleaned(register("mobile"), MOBILE)} />
         </Field>
         {staff && !isSelf && (
           <Switch id="staff-active" label="Can sign in" checked={watch("active")} onChange={(v) => setValue("active", v)} />

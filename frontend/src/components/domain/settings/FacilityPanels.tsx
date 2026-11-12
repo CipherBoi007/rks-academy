@@ -3,9 +3,10 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
-import { MapPin, Pencil, Plus } from "lucide-react";
+import { MapPin, Pencil, Plus, UserPlus } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Card, CardTitle } from "@/components/ui/Card";
@@ -19,7 +20,7 @@ import { api } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { MOBILE, applyServerErrors, cleaned } from "@/lib/forms";
 import { formatMobile, formatTimeRange, LEVEL_LABEL, LEVELS } from "@/lib/format";
-import { keys, useAdminBatches, useAdminCourts, useCoaches } from "@/lib/queries";
+import { keys, useAdminBatches, useAdminCourts, useCoaches, useStaff } from "@/lib/queries";
 import type { Batch, CoachAdmin, CourtAdmin, DayOfWeek, Level } from "@/lib/types";
 
 const DAYS: { value: DayOfWeek; short: string }[] = [
@@ -350,7 +351,10 @@ function BatchSheet({ open, batch, courts, onClose }: { open: boolean; batch?: B
 
 export function CoachesPanel() {
   const coaches = useCoaches(true);
+  const staff = useStaff();
+  const router = useRouter();
   const [editing, setEditing] = useState<{ open: boolean; coach?: CoachAdmin }>({ open: false });
+  const withLogin = new Set(staff.data?.filter((s) => s.active && s.coachId).map((s) => s.coachId));
 
   return (
     <div className="space-y-4">
@@ -381,6 +385,17 @@ export function CoachesPanel() {
                 </p>
               </div>
               {!c.active && <OffChip />}
+              {/* A coach profile is who runs batches; a login is who can sign in. One tap links the two. */}
+              {c.active && staff.data && !withLogin.has(c.id) && (
+                <Button
+                  variant="secondary"
+                  className="px-3"
+                  icon={<UserPlus className="h-4 w-4" aria-hidden />}
+                  onClick={() => router.push(`/settings?addLogin=${c.id}`)}
+                >
+                  <span className="max-sm:sr-only">Create login</span>
+                </Button>
+              )}
               <Button variant="secondary" size="icon" aria-label={`Edit ${c.name}`} onClick={() => setEditing({ open: true, coach: c })}>
                 <Pencil className="h-4 w-4" aria-hidden />
               </Button>
@@ -432,7 +447,7 @@ function CoachSheet({ open, coach, onClose }: { open: boolean; coach?: CoachAdmi
       open={open}
       onClose={onClose}
       title={coach ? "Edit coach" : "Add coach"}
-      description="To let a coach sign in, also add a login for them under Staff."
+      description="Coaches run batches and appear on schedules. To let one sign in, use Create login in the list."
       footer={<Button type="submit" form="coach-form" size="lg" className="w-full" loading={save.isPending}>Save coach</Button>}
     >
       <form id="coach-form" noValidate onSubmit={handleSubmit((v) => save.mutate(v))} className="space-y-5">
