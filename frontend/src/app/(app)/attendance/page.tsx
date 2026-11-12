@@ -1,14 +1,16 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Calendar, Check, CheckCheck, Save, X } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { DatePicker } from "@/components/ui/DatePicker";
 import { LevelChip } from "@/components/ui/Chip";
 import { Input } from "@/components/ui/Field";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Pager, useMobilePager } from "@/components/ui/Pager";
 import { PillGroup } from "@/components/ui/Pills";
 import { EmptyState, ErrorState, LoadingRegion, Skeleton } from "@/components/ui/States";
 import { useToast } from "@/components/ui/Toast";
@@ -51,14 +53,20 @@ export default function AttendancePage() {
         <div className="flex flex-col gap-5 lg:flex-row lg:gap-6">
           <div className="lg:w-64">
             <StepLabel n={1} label="Date" htmlFor="att-date" />
-            <Input
-              id="att-date"
-              type="date"
-              icon={<Calendar className="h-5 w-5 text-primary" />}
-              value={date}
-              max={config?.today}
-              onChange={(e) => e.target.value && setDate(e.target.value)}
-            />
+            {/* Phones get the app's own calendar; md and up keep the browser's date field. */}
+            <div className="md:hidden">
+              <DatePicker label="Attendance date" value={date} max={config?.today} onChange={setDate} />
+            </div>
+            <div className="hidden md:block">
+              <Input
+                id="att-date"
+                type="date"
+                icon={<Calendar className="h-5 w-5 text-primary" />}
+                value={date}
+                max={config?.today}
+                onChange={(e) => e.target.value && setDate(e.target.value)}
+              />
+            </div>
           </div>
           <div className="min-w-0 flex-1">
             <StepLabel n={2} label="Court" />
@@ -168,6 +176,8 @@ function Roster({ sheet }: { sheet: AttendanceSheet }) {
   const unmarked = sheet.entries.length - present - absent;
   const dirty = sheet.entries.some((e) => marks[e.player.id] !== saved[e.player.id]);
   const progress = sheet.entries.length ? ((present + absent) / sheet.entries.length) * 100 : 0;
+  const listTop = useRef<HTMLUListElement>(null);
+  const pager = useMobilePager({ total: sheet.entries.length, loaded: sheet.entries.length, anchor: listTop });
 
   const save = useMutation({
     mutationFn: () =>
@@ -225,9 +235,12 @@ function Roster({ sheet }: { sheet: AttendanceSheet }) {
         </div>
       </Card>
 
-      <ul className="mt-3 space-y-3">
-        {sheet.entries.map(({ player }) => (
-          <li key={player.id} className="flex items-center gap-3 rounded-2xl border border-line bg-white p-3 sm:p-4">
+      <ul ref={listTop} className="mt-3 scroll-mt-24 space-y-3">
+        {sheet.entries.map(({ player }, i) => (
+          <li
+            key={player.id}
+            className={cn("flex items-center gap-3 rounded-2xl border border-line bg-white p-3 sm:p-4", pager.itemClass(i))}
+          >
             <Avatar name={player.name} initials={player.initials} photoUrl={player.photoUrl} size="lg" />
             <div className="min-w-0 flex-1">
               <p className="truncate text-base font-semibold sm:text-lg">{player.name}</p>
@@ -244,8 +257,10 @@ function Roster({ sheet }: { sheet: AttendanceSheet }) {
         ))}
       </ul>
 
-      {/* Sticky above the tab bar on phones; inline on larger screens. */}
-      <div className="sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-10 mt-5 md:static md:bottom-auto">
+      <Pager pager={pager} label="Players" />
+
+      {/* At the end of the list, after the last player. */}
+      <div className="mt-5">
         <Button
           size="lg"
           className="w-full md:w-auto"

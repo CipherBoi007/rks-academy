@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, createContext, useContext, useState } from "react";
+import { Suspense, createContext, useContext, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Ban, Download, FileText, Plus, Send } from "lucide-react";
 import { OwnerOnly } from "@/components/domain/OwnerOnly";
@@ -16,17 +16,22 @@ import { ModeChip } from "@/components/ui/Chip";
 import { KpiCard } from "@/components/ui/KpiCard";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PillGroup } from "@/components/ui/Pills";
+import { Pager, useMobilePager } from "@/components/ui/Pager";
 import { Popover } from "@/components/ui/Popover";
 import { SegmentedTabs } from "@/components/ui/SegmentedTabs";
 import { EmptyState, ErrorState, LoadingRegion, Skeleton } from "@/components/ui/States";
 import { useToast } from "@/components/ui/Toast";
 import { api, errorMessage } from "@/lib/api";
+import { cn } from "@/lib/cn";
 import { addDays, formatDate, formatMonth, inr } from "@/lib/format";
 import { keys, useConfig, useDues, usePayments, usePaymentsSummary, useReminderStatus, type PaymentFilters } from "@/lib/queries";
 import type { Payment, PaymentMode, ReminderRun } from "@/lib/types";
 
 type Tab = "collections" | "pending" | "history";
 const TABS: Tab[] = ["collections", "pending", "history"];
+
+/** Smaller header buttons on phones so Export, Fee structure and Record payment fit on one line. */
+const PHONE_COMPACT = "max-sm:gap-1.5 max-sm:px-2.5 max-sm:text-[13px]";
 
 export default function FeesPage() {
   return (
@@ -57,13 +62,19 @@ function Fees() {
       <PageHeader
         eyebrow="Collections & dues"
         title="Fees"
+        // Phones: all three on one line, slightly tighter.
+        actionsClassName="max-sm:flex-nowrap max-sm:gap-2"
         actions={
           <>
             <ExportMenu />
-            <ButtonLink href="/fee-structure" variant="secondary">
+            <ButtonLink href="/fee-structure" variant="secondary" className={PHONE_COMPACT}>
               Fee structure
             </ButtonLink>
-            <Button icon={<Plus className="h-5 w-5" aria-hidden />} onClick={() => setRecording({ open: true })}>
+            <Button
+              icon={<Plus className="h-5 w-5 max-sm:h-4 max-sm:w-4" aria-hidden />}
+              onClick={() => setRecording({ open: true })}
+              className={cn(PHONE_COMPACT, "max-sm:flex-1")}
+            >
               Record payment
             </Button>
           </>
@@ -136,13 +147,20 @@ function History() {
           { value: "CASH", label: "Cash" },
         ]}
       />
-      <PaymentsView query={payments} emptyMessage="No payments recorded yet." />
+      <PaymentsView key={mode} query={payments} emptyMessage="No payments recorded yet." />
     </>
   );
 }
 
 function PaymentsView({ query, emptyMessage }: { query: ReturnType<typeof usePayments>; emptyMessage: string }) {
   const rows = query.data?.pages.flatMap((p) => p.content) ?? [];
+  const listTop = useRef<HTMLUListElement>(null);
+  const pager = useMobilePager({
+    total: query.data?.pages[0]?.totalElements ?? 0,
+    loaded: rows.length,
+    loadMore: () => query.fetchNextPage(),
+    anchor: listTop,
+  });
   if (query.isError) {
     return (
       <Card>
@@ -171,13 +189,15 @@ function PaymentsView({ query, emptyMessage }: { query: ReturnType<typeof usePay
   return (
     <>
       <PaymentsTable rows={rows} />
-      <ul className="space-y-3 md:hidden">
-        {rows.map((p) => (
+      {/* Phones: 10 cards per page. The table (md and up) keeps Load more. */}
+      <ul ref={listTop} className="scroll-mt-24 space-y-3 md:hidden">
+        {rows.slice(pager.start, pager.end).map((p) => (
           <PaymentCard key={p.id} payment={p} />
         ))}
       </ul>
+      <Pager pager={pager} label="Payments" />
       {query.hasNextPage && (
-        <div className="mt-4 flex justify-center">
+        <div className="mt-4 flex justify-center max-md:hidden">
           <Button variant="secondary" loading={query.isFetchingNextPage} onClick={() => query.fetchNextPage()}>
             Load more
           </Button>
@@ -303,6 +323,9 @@ function PaymentCard({ payment: p }: { payment: Payment }) {
 
 function Pending({ onCollect }: { onCollect: (playerId: number) => void }) {
   const dues = useDues();
+  const listTop = useRef<HTMLUListElement>(null);
+  const count = dues.data?.content.length ?? 0;
+  const pager = useMobilePager({ total: count, loaded: count, anchor: listTop });
   return (
     <div className="space-y-4">
       <RemindersPanel />
@@ -323,19 +346,23 @@ function Pending({ onCollect }: { onCollect: (playerId: number) => void }) {
           <EmptyState title="All paid up" message="Every active player's current fee period is covered." />
         </Card>
       ) : (
-        <ul className="space-y-3">
-          {dues.data.content.map((d) => (
-            <DueRow
-              key={d.player.id}
-              due={d}
-              action={
-                <Button variant="secondary" className="ml-1 px-3" onClick={() => onCollect(d.player.id)}>
-                  Collect
-                </Button>
-              }
-            />
-          ))}
-        </ul>
+        <div>
+          <ul ref={listTop} className="scroll-mt-24 space-y-3">
+            {dues.data.content.map((d, i) => (
+              <DueRow
+                key={d.player.id}
+                due={d}
+                className={pager.itemClass(i)}
+                action={
+                  <Button variant="secondary" className="ml-1 px-3" onClick={() => onCollect(d.player.id)}>
+                    Collect
+                  </Button>
+                }
+              />
+            ))}
+          </ul>
+          <Pager pager={pager} label="Pending dues" />
+        </div>
       )}
     </div>
   );
@@ -395,16 +422,20 @@ function ExportMenu() {
   return (
     <Popover
       label="Export"
+      // On phones Export is the leftmost button, so the menu opens to the right of it.
+      className="max-sm:left-0 max-sm:right-auto"
       trigger={({ open, toggle, id }) => (
         <Button
           variant="secondary"
           icon={<Download className="h-4 w-4" aria-hidden />}
+          // Narrow phones (360px): just the download icon, so the three buttons still fit on one line.
+          className={cn(PHONE_COMPACT, "max-[379px]:w-11 max-[379px]:px-0")}
           onClick={toggle}
           aria-haspopup="menu"
           aria-expanded={open}
           aria-controls={open ? id : undefined}
         >
-          Export
+          <span className="max-[379px]:sr-only">Export</span>
         </Button>
       )}
     >

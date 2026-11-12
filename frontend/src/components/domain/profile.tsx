@@ -1,14 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { Briefcase, Cake, CalendarDays, Droplet, GraduationCap, MapPin, Phone, User } from "lucide-react";
 import { AttendanceHeatmap } from "@/components/domain/AttendanceHeatmap";
+import { AttendanceMonth } from "@/components/domain/AttendanceMonth";
 import { SkillProgress } from "@/components/domain/SkillProgress";
 import { Avatar } from "@/components/ui/Avatar";
 import { Card, CardTitle } from "@/components/ui/Card";
 import { LevelChip, StatusChip } from "@/components/ui/Chip";
+import { Pager, useMobilePager } from "@/components/ui/Pager";
 import { EmptyState, ErrorState, Skeleton } from "@/components/ui/States";
 import { cn } from "@/lib/cn";
 import { formatDate, formatMobile, formatPeriod, formatTimeRange, GENDER_LABEL, inr } from "@/lib/format";
@@ -153,7 +155,15 @@ export function AttendanceCard({
         ) : !query.data || !today ? (
           <Skeleton className="h-56" />
         ) : (
-          <AttendanceHeatmap data={query.data} today={today} />
+          <>
+            {/* Phones: one month at a time as a calendar. md and up: the 14-week heatmap. */}
+            <div className="md:hidden">
+              <AttendanceMonth data={query.data} today={today} />
+            </div>
+            <div className="hidden md:block">
+              <AttendanceHeatmap data={query.data} today={today} />
+            </div>
+          </>
         )}
       </div>
     </Card>
@@ -197,6 +207,9 @@ export function FeeTimeline({
   receiptHref: (receiptNo: string) => string;
   receiptTarget?: "_blank";
 }) {
+  const listTop = useRef<HTMLOListElement>(null);
+  const count = payments.data?.length ?? 0;
+  const pager = useMobilePager({ total: count, loaded: count, anchor: listTop });
   return (
     <Card className="mt-6 p-5 sm:p-6">
       <CardTitle>Fee history</CardTitle>
@@ -211,9 +224,13 @@ export function FeeTimeline({
       ) : payments.data.length === 0 && !due ? (
         <EmptyState title="No payments yet" message="Fees paid at the academy will show here." />
       ) : (
-        <ol className="relative mt-5 space-y-6 before:absolute before:bottom-2 before:left-[9px] before:top-2 before:w-0.5 before:bg-line">
+        <>
+          <ol
+            ref={listTop}
+            className="relative mt-5 scroll-mt-24 space-y-6 before:absolute before:bottom-2 before:left-[9px] before:top-2 before:w-0.5 before:bg-line"
+          >
           {due && (
-            <li className="relative flex gap-4 pl-8">
+            <li className={cn("relative flex gap-4 pl-8", pager.page > 0 && "max-md:hidden")}>
               <span className="absolute left-0 top-1 h-5 w-5 rounded-full border-[3px] border-alert bg-white" aria-hidden />
               <div className="min-w-0 flex-1">
                 <p className="text-base font-semibold sm:text-lg">
@@ -225,7 +242,7 @@ export function FeeTimeline({
             </li>
           )}
           {payments.data.map((p, i) => (
-            <li key={p.id} className={cn("relative flex gap-4 pl-8", p.voided && "opacity-60")}>
+            <li key={p.id} className={cn("relative flex gap-4 pl-8", p.voided && "opacity-60", pager.itemClass(i))}>
               <span
                 className={cn(
                   "absolute left-0 top-1 h-5 w-5 rounded-full border-[3px]",
@@ -254,7 +271,9 @@ export function FeeTimeline({
               )}
             </li>
           ))}
-        </ol>
+          </ol>
+          <Pager pager={pager} label="Fee history" />
+        </>
       )}
     </Card>
   );

@@ -36,14 +36,25 @@ export default function StorePage() {
       <PageHeader
         eyebrow="RKS Pro Shop · Academy prices"
         title="Store"
+        inlineActions
         actions={
           isOwner && (
             <>
-              <Button variant="secondary" aria-pressed={showArchived} onClick={() => setShowArchived((v) => !v)}>
+              <Button
+                variant="secondary"
+                aria-pressed={showArchived}
+                onClick={() => setShowArchived((v) => !v)}
+                className="max-sm:px-3"
+              >
                 {showArchived ? "Hide archived" : "Show archived"}
               </Button>
-              <Button icon={<Plus className="h-5 w-5" aria-hidden />} onClick={() => setAdding(true)}>
-                Add product
+              {/* Phones don't have room for the label next to the title: just the plus. */}
+              <Button
+                icon={<Plus className="h-5 w-5" aria-hidden />}
+                onClick={() => setAdding(true)}
+                className="max-[439px]:w-11 max-[439px]:px-0"
+              >
+                <span className="max-[439px]:sr-only">Add product</span>
               </Button>
             </>
           )

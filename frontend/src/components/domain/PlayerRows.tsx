@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Avatar } from "@/components/ui/Avatar";
 import { LevelChip, StatusChip } from "@/components/ui/Chip";
+import { cn } from "@/lib/cn";
 import { formatDate, inr } from "@/lib/format";
 import type { Due, Payment, PlayerSummary } from "@/lib/types";
 
@@ -45,9 +46,9 @@ export function PaymentRow({ payment }: { payment: Payment }) {
   );
 }
 
-export function DueRow({ due, action }: { due: Due; action?: React.ReactNode }) {
+export function DueRow({ due, action, className }: { due: Due; action?: React.ReactNode; className?: string }) {
   return (
-    <li className="relative flex items-center gap-3 overflow-hidden rounded-xl border border-line bg-white py-3 pl-5 pr-3">
+    <li className={cn("relative flex items-center gap-3 overflow-hidden rounded-xl border border-line bg-white py-3 pl-5 pr-3", className)}>
       <span className="absolute inset-y-3 left-2 w-[3px] rounded-full bg-alert" aria-hidden />
       <div className="min-w-0 flex-1">
         <Link href={`/players/${due.player.id}`} className="block truncate font-semibold hover:underline">

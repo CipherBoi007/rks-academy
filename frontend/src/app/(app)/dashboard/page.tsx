@@ -91,8 +91,9 @@ export default function DashboardPage() {
 
 function TodayOnCourt() {
   const courts = useTodayCourts();
+  // Phones: no outer card, so the court cards sit directly on the page instead of spilling over a card's edges.
   return (
-    <Card className="mt-6 p-4 sm:p-6">
+    <section className="mt-6 md:rounded-2xl md:border md:border-line md:bg-white md:p-6 md:shadow-card">
       <CardTitle
         action={
           <span className="inline-flex items-center gap-2 text-sm font-medium text-ink/80">
@@ -114,13 +115,13 @@ function TodayOnCourt() {
         </LoadingRegion>
       ) : (
         // Phones: a horizontal snap scroller with a peek of the next court.
-        <div className="scrollbar-none relative -mx-4 mt-5 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-1 sm:-mx-6 sm:px-6 lg:mx-0 lg:grid lg:grid-cols-2 lg:overflow-visible lg:px-0 xl:grid-cols-4">
+        <div className="scrollbar-none relative -mx-4 mt-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-2 md:-mx-6 md:mt-5 md:scroll-px-0 md:gap-4 md:px-6 md:pb-1 lg:mx-0 lg:grid lg:grid-cols-2 lg:overflow-visible lg:px-0 xl:grid-cols-4">
           {courts.data.map((c) => (
             <CourtCard key={c.court.id} day={c} />
           ))}
         </div>
       )}
-    </Card>
+    </section>
   );
 }
 
@@ -130,7 +131,7 @@ function CourtCard({ day }: { day: CourtDay }) {
   return (
     <section
       aria-label={day.court.name}
-      className="min-w-[85%] snap-start rounded-2xl border border-line bg-surface p-3.5 sm:min-w-[45%] lg:min-w-0"
+      className="min-w-[85%] snap-start rounded-2xl border border-line bg-white p-3.5 shadow-card sm:min-w-[45%] md:bg-surface md:shadow-none lg:min-w-0"
     >
       <header className="mb-3 flex items-center justify-between gap-2 px-1">
         <h3 className="whitespace-nowrap font-display text-2xl font-semibold uppercase">{day.court.name}</h3>
@@ -140,7 +141,7 @@ function CourtCard({ day }: { day: CourtDay }) {
       </header>
       <ul className="space-y-3">
         {day.slots.map((slot) => (
-          <li key={slot.batchId} className="rounded-xl border border-line bg-white p-3.5">
+          <li key={slot.batchId} className="rounded-xl border border-line bg-surface/60 p-3.5 md:bg-white">
             <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
               <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[13px] font-semibold text-primary">
                 <Clock className="h-4 w-4" aria-hidden />

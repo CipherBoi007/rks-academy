@@ -164,26 +164,3 @@ WHERE p.active AND p.parent_mobile = g.parent_mobile AND p.sibling_group_id IS N
 
 
 -- -----------------------------------------------------------------------------------------------------
--- 9. Final checks. Any failure here cancels EVERYTHING above.
--- -----------------------------------------------------------------------------------------------------
-DO $$
-BEGIN
-    IF EXISTS (SELECT 1 FROM admin_user WHERE name LIKE '%CHANGE_ME%' OR mobile !~ '^\d{10}$')
-       OR EXISTS (SELECT 1 FROM coach WHERE name LIKE '%CHANGE_ME%' OR (mobile IS NOT NULL AND mobile !~ '^\d{10}$'))
-       OR EXISTS (SELECT 1 FROM player WHERE name LIKE '%CHANGE_ME%' OR parent_name LIKE '%CHANGE_ME%'
-                                          OR school LIKE '%CHANGE_ME%' OR parent_mobile !~ '^\d{10}$') THEN
-        RAISE EXCEPTION 'A CHANGE_ME value is left, or a mobile number is not exactly 10 digits. Nothing was saved.';
-    END IF;
-    IF (SELECT count(*) FROM admin_user WHERE role = 'OWNER' AND active) = 0 THEN
-        RAISE EXCEPTION 'No owner login exists. Fill in section 1. Nothing was saved.';
-    END IF;
-END $$;
-
-COMMIT;
-
--- What got loaded:
-SELECT 'owners' AS what, count(*) FROM rks.admin_user WHERE role = 'OWNER'
-UNION ALL SELECT 'coach logins', count(*) FROM rks.admin_user WHERE role = 'COACH'
-UNION ALL SELECT 'coaches',      count(*) FROM rks.coach WHERE active
-UNION ALL SELECT 'batches',      count(*) FROM rks.batch WHERE active
-UNION ALL SELECT 'players',      count(*) FROM rks.player WHERE active;
