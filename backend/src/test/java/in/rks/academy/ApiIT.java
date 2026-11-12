@@ -484,6 +484,15 @@ class ApiIT {
                 .as("Pranav is paid to December").isEqualTo(HttpStatus.NO_CONTENT);
         assertThat(get(token, "/family/receipts/26/1147").get("playerName").asText()).isEqualTo("Preethi Jayakumar");
 
+        // The attendance calendar asks for one month at a time.
+        JsonNode october = get(token, "/family/children/" + preethi + "/attendance?month=2026-10");
+        assertThat(october.get("from").asText()).isEqualTo("2026-10-01");
+        assertThat(october.get("days")).isNotEmpty()
+                .allSatisfy(d -> assertThat(d.get("date").asText()).startsWith("2026-10"));
+        assertThat(october.get("to").asText()).isEqualTo("2026-10-31");
+        assertThat(call(token, HttpMethod.GET, "/family/children/2/attendance?month=2026-10", null)
+                .getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+
         // Someone else's child or receipt simply doesn't exist for this parent.
         assertThat(call(token, HttpMethod.GET, "/family/children/2", null).getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
         assertThat(call(token, HttpMethod.GET, "/family/children/2/payments", null).getStatusCode())

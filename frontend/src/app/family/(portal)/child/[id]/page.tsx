@@ -15,7 +15,6 @@ export default function FamilyChildPage({ params }: { params: Promise<{ id: stri
   const id = Number(use(params).id);
   const { data: config } = useConfig();
   const child = useFamilyChild(id);
-  const attendance = useFamilyAttendance(id);
   const progress = useFamilyProgress(id);
   const payments = useFamilyPayments(id);
   const due = useFamilyDue(id);
@@ -38,7 +37,13 @@ export default function FamilyChildPage({ params }: { params: Promise<{ id: stri
           <ProfileHeader player={child.data} />
           <ProfileInfoCards player={child.data} siblingHref={(sid) => `/family/child/${sid}`} />
           <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-5">
-            <AttendanceCard query={attendance} today={config?.today} className="lg:col-span-3" />
+            <AttendanceCard
+              playerId={id}
+              joinDate={child.data.joinDate}
+              today={config?.today}
+              useAttendance={useFamilyAttendance}
+              className="lg:col-span-3"
+            />
             <SkillsCard query={progress} className="lg:col-span-2" />
           </div>
           <FeeTimeline

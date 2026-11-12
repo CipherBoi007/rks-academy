@@ -16,7 +16,7 @@ import { ModeChip } from "@/components/ui/Chip";
 import { KpiCard } from "@/components/ui/KpiCard";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PillGroup } from "@/components/ui/Pills";
-import { Pager, useMobilePager } from "@/components/ui/Pager";
+import { Pager, usePager } from "@/components/ui/Pager";
 import { Popover } from "@/components/ui/Popover";
 import { SegmentedTabs } from "@/components/ui/SegmentedTabs";
 import { EmptyState, ErrorState, LoadingRegion, Skeleton } from "@/components/ui/States";
@@ -154,8 +154,8 @@ function History() {
 
 function PaymentsView({ query, emptyMessage }: { query: ReturnType<typeof usePayments>; emptyMessage: string }) {
   const rows = query.data?.pages.flatMap((p) => p.content) ?? [];
-  const listTop = useRef<HTMLUListElement>(null);
-  const pager = useMobilePager({
+  const listTop = useRef<HTMLDivElement>(null);
+  const pager = usePager({
     total: query.data?.pages[0]?.totalElements ?? 0,
     loaded: rows.length,
     loadMore: () => query.fetchNextPage(),
@@ -188,21 +188,15 @@ function PaymentsView({ query, emptyMessage }: { query: ReturnType<typeof usePay
   }
   return (
     <>
-      <PaymentsTable rows={rows} />
-      {/* Phones: 10 cards per page. The table (md and up) keeps Load more. */}
-      <ul ref={listTop} className="scroll-mt-24 space-y-3 md:hidden">
-        {rows.slice(pager.start, pager.end).map((p) => (
-          <PaymentCard key={p.id} payment={p} />
-        ))}
-      </ul>
+      <div ref={listTop} className="scroll-mt-24">
+        <PaymentsTable rows={pager.slice(rows)} />
+        <ul className="space-y-3 md:hidden">
+          {pager.slice(rows).map((p) => (
+            <PaymentCard key={p.id} payment={p} />
+          ))}
+        </ul>
+      </div>
       <Pager pager={pager} label="Payments" />
-      {query.hasNextPage && (
-        <div className="mt-4 flex justify-center max-md:hidden">
-          <Button variant="secondary" loading={query.isFetchingNextPage} onClick={() => query.fetchNextPage()}>
-            Load more
-          </Button>
-        </div>
-      )}
     </>
   );
 }
@@ -325,7 +319,7 @@ function Pending({ onCollect }: { onCollect: (playerId: number) => void }) {
   const dues = useDues();
   const listTop = useRef<HTMLUListElement>(null);
   const count = dues.data?.content.length ?? 0;
-  const pager = useMobilePager({ total: count, loaded: count, anchor: listTop });
+  const pager = usePager({ total: count, loaded: count, anchor: listTop });
   return (
     <div className="space-y-4">
       <RemindersPanel />
@@ -348,11 +342,10 @@ function Pending({ onCollect }: { onCollect: (playerId: number) => void }) {
       ) : (
         <div>
           <ul ref={listTop} className="scroll-mt-24 space-y-3">
-            {dues.data.content.map((d, i) => (
+            {pager.slice(dues.data.content).map((d) => (
               <DueRow
                 key={d.player.id}
                 due={d}
-                className={pager.itemClass(i)}
                 action={
                   <Button variant="secondary" className="ml-1 px-3" onClick={() => onCollect(d.player.id)}>
                     Collect

@@ -53,7 +53,7 @@ export interface CodeRequested {
 export const familyKeys = {
   me: ["family", "me"] as const,
   child: (id: number) => ["family", "child", id] as const,
-  attendance: (id: number) => ["family", "child", id, "attendance"] as const,
+  attendance: (id: number, month: string) => ["family", "child", id, "attendance", month] as const,
   progress: (id: number) => ["family", "child", id, "progress"] as const,
   payments: (id: number) => ["family", "child", id, "payments"] as const,
   due: (id: number) => ["family", "child", id, "due"] as const,
@@ -69,10 +69,12 @@ export const useFamily = () => useQuery({ queryKey: familyKeys.me, queryFn: () =
 export const useFamilyChild = (id: number) =>
   useQuery({ queryKey: familyKeys.child(id), queryFn: () => api<PlayerDetail>(`/family/children/${id}`) });
 
-export const useFamilyAttendance = (id: number) =>
+/** One calendar month of a child's attendance; month is its first day, e.g. "2026-11-01". */
+export const useFamilyAttendance = (id: number, month: string) =>
   useQuery({
-    queryKey: familyKeys.attendance(id),
-    queryFn: () => api<PlayerAttendance>(`/family/children/${id}/attendance`),
+    queryKey: familyKeys.attendance(id, month),
+    queryFn: () => api<PlayerAttendance>(`/family/children/${id}/attendance`, { query: { month: month.slice(0, 7) } }),
+    placeholderData: keepPreviousData,
   });
 
 export const useFamilyProgress = (id: number) =>

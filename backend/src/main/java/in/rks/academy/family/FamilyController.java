@@ -21,7 +21,9 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
+import java.time.YearMonth;
 import java.util.List;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -94,9 +96,12 @@ public class FamilyController {
         return family.child(id);
     }
 
+    @Operation(summary = "One calendar month of a child's attendance, e.g. ?month=2026-10. Defaults to the current month.")
     @GetMapping("/children/{id}/attendance")
-    public PlayerAttendance attendance(@PathVariable long id) {
-        return family.attendance(id);
+    public PlayerAttendance attendance(
+            @PathVariable long id,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM") YearMonth month) {
+        return family.attendance(id, month);
     }
 
     @GetMapping("/children/{id}/progress")

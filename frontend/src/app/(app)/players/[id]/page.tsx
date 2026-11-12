@@ -20,7 +20,6 @@ export default function PlayerProfilePage({ params }: { params: Promise<{ id: st
   const canSeeFees = useCanSeeFees();
   const { data: config } = useConfig();
   const player = usePlayer(id);
-  const attendance = usePlayerAttendance(id);
   const progress = usePlayerProgress(id);
   const [editing, setEditing] = useState(false);
   const [collecting, setCollecting] = useState(false);
@@ -69,7 +68,13 @@ export default function PlayerProfilePage({ params }: { params: Promise<{ id: st
           />
           <ProfileInfoCards player={player.data} siblingHref={(sid) => `/players/${sid}`} />
           <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-5">
-            <AttendanceCard query={attendance} today={config?.today} className="lg:col-span-3" />
+            <AttendanceCard
+              playerId={id}
+              joinDate={player.data.joinDate}
+              today={config?.today}
+              useAttendance={usePlayerAttendance}
+              className="lg:col-span-3"
+            />
             <SkillsCard
               query={progress}
               className="lg:col-span-2"

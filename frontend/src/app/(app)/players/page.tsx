@@ -9,11 +9,10 @@ import { Card } from "@/components/ui/Card";
 import { SearchInput } from "@/components/ui/Controls";
 import { Select } from "@/components/ui/Field";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Pager, useMobilePager } from "@/components/ui/Pager";
+import { Pager, usePager } from "@/components/ui/Pager";
 import { PillGroup } from "@/components/ui/Pills";
 import { Sheet } from "@/components/ui/Sheet";
 import { EmptyState, ErrorState, LoadingRegion, Skeleton } from "@/components/ui/States";
-import { cn } from "@/lib/cn";
 import { LEVEL_LABEL, LEVELS } from "@/lib/format";
 import { useBatches, useCanSeeFees, useCourts, useDashboardSummary, usePlayers, type PlayerFilters } from "@/lib/queries";
 import type { FeeStatus, Level } from "@/lib/types";
@@ -53,7 +52,7 @@ export default function PlayersPage() {
   const total = players.data?.pages[0]?.totalElements ?? 0;
   const activeFilterCount = [filters.batchId, filters.courtId, filters.fee !== "ALL", filters.level !== "ALL"].filter(Boolean).length;
   const listTop = useRef<HTMLDivElement>(null);
-  const pager = useMobilePager({
+  const pager = usePager({
     total,
     loaded: list.length,
     loadMore: () => players.fetchNextPage(),
@@ -142,21 +141,11 @@ export default function PlayersPage() {
       ) : (
         <>
           <div ref={listTop} className="grid scroll-mt-24 grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {list.map((p, i) => (
-              // display:contents keeps the desktop grid exactly as before; phones hide cards off the current page.
-              <div key={p.id} className={cn("contents", pager.itemClass(i))}>
-                <PlayerCard player={p} />
-              </div>
+            {pager.slice(list).map((p) => (
+              <PlayerCard key={p.id} player={p} />
             ))}
           </div>
           <Pager pager={pager} label="Players" />
-          {players.hasNextPage && (
-            <div className="mt-5 flex justify-center max-md:hidden">
-              <Button variant="secondary" loading={players.isFetchingNextPage} onClick={() => players.fetchNextPage()}>
-                Load more
-              </Button>
-            </div>
-          )}
         </>
       )}
 

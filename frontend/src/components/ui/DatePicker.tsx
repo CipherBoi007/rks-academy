@@ -12,11 +12,14 @@ export function DatePicker({
   onChange,
   max,
   label,
+  id,
 }: {
   value: string;
   onChange: (iso: string) => void;
   max?: string;
   label: string;
+  /** For a <label htmlFor>. */
+  id?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [month, setMonth] = useState(() => monthStart(value || max || "2000-01-01"));
@@ -54,6 +57,7 @@ export function DatePicker({
   return (
     <div ref={root} className="relative">
       <button
+        id={id}
         type="button"
         onClick={toggle}
         aria-haspopup="dialog"
@@ -66,7 +70,8 @@ export function DatePicker({
         )}
       >
         <Calendar className="h-5 w-5 shrink-0 text-primary" aria-hidden />
-        <span className="flex-1 truncate font-medium">{value ? formatLongDate(value) : "Pick a date"}</span>
+        {/* "Sat, 07 Nov 2026": the short weekday keeps the year visible in narrow columns. */}
+        <span className="flex-1 truncate font-medium">{value ? formatLongDate(value).replace(/^(\w{3})\w*/, "$1") : "Pick a date"}</span>
         <ChevronDown className={cn("h-5 w-5 shrink-0 text-muted transition-transform", open && "rotate-180")} aria-hidden />
       </button>
 
@@ -75,7 +80,7 @@ export function DatePicker({
           id={panelId}
           role="dialog"
           aria-label={`Choose ${label.toLowerCase()}`}
-          className="absolute inset-x-0 top-full z-40 mt-2 animate-fade-in rounded-2xl border border-line bg-white p-3 shadow-sheet"
+          className="absolute inset-x-0 top-full z-40 mt-2 animate-fade-in rounded-2xl border border-line bg-white p-3 shadow-sheet md:right-auto md:w-80"
         >
           <div className="mb-2 flex items-center justify-between">
             <button

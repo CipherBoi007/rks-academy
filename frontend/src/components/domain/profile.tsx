@@ -4,13 +4,12 @@ import Link from "next/link";
 import { useRef, type ReactNode } from "react";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { Briefcase, Cake, CalendarDays, Droplet, GraduationCap, MapPin, Phone, User } from "lucide-react";
-import { AttendanceHeatmap } from "@/components/domain/AttendanceHeatmap";
 import { AttendanceMonth } from "@/components/domain/AttendanceMonth";
 import { SkillProgress } from "@/components/domain/SkillProgress";
 import { Avatar } from "@/components/ui/Avatar";
 import { Card, CardTitle } from "@/components/ui/Card";
 import { LevelChip, StatusChip } from "@/components/ui/Chip";
-import { Pager, useMobilePager } from "@/components/ui/Pager";
+import { Pager, usePager } from "@/components/ui/Pager";
 import { EmptyState, ErrorState, Skeleton } from "@/components/ui/States";
 import { cn } from "@/lib/cn";
 import { formatDate, formatMobile, formatPeriod, formatTimeRange, GENDER_LABEL, inr } from "@/lib/format";
@@ -135,37 +134,30 @@ export function ProfileInfoCards({ player, siblingHref }: { player: PlayerDetail
   );
 }
 
+/** Month-by-month attendance. useAttendance fetches one month (staff and family each have their own). */
 export function AttendanceCard({
-  query,
+  playerId,
+  joinDate,
   today,
+  useAttendance,
   className,
 }: {
-  query: UseQueryResult<PlayerAttendance>;
+  playerId: number;
+  joinDate: string;
   today?: string;
+  useAttendance: (id: number, month: string) => UseQueryResult<PlayerAttendance>;
   className?: string;
 }) {
   return (
     <Card className={cn("p-5 sm:p-6", className)}>
-      <CardTitle action={query.data && <span className="font-display text-3xl font-bold text-primary">{query.data.pct}%</span>}>
-        Attendance
-      </CardTitle>
-      <div className="mt-5">
-        {query.isError ? (
-          <ErrorState error={query.error} onRetry={() => query.refetch()} />
-        ) : !query.data || !today ? (
-          <Skeleton className="h-56" />
-        ) : (
-          <>
-            {/* Phones: one month at a time as a calendar. md and up: the 14-week heatmap. */}
-            <div className="md:hidden">
-              <AttendanceMonth data={query.data} today={today} />
-            </div>
-            <div className="hidden md:block">
-              <AttendanceHeatmap data={query.data} today={today} />
-            </div>
-          </>
-        )}
-      </div>
+      {today ? (
+        <AttendanceMonth playerId={playerId} joinDate={joinDate} today={today} useAttendance={useAttendance} />
+      ) : (
+        <>
+          <CardTitle>Attendance</CardTitle>
+          <Skeleton className="mt-5 h-72" />
+        </>
+      )}
     </Card>
   );
 }
@@ -209,7 +201,7 @@ export function FeeTimeline({
 }) {
   const listTop = useRef<HTMLOListElement>(null);
   const count = payments.data?.length ?? 0;
-  const pager = useMobilePager({ total: count, loaded: count, anchor: listTop });
+  const pager = usePager({ total: count, loaded: count, anchor: listTop });
   return (
     <Card className="mt-6 p-5 sm:p-6">
       <CardTitle>Fee history</CardTitle>
@@ -230,7 +222,7 @@ export function FeeTimeline({
             className="relative mt-5 scroll-mt-24 space-y-6 before:absolute before:bottom-2 before:left-[9px] before:top-2 before:w-0.5 before:bg-line"
           >
           {due && (
-            <li className={cn("relative flex gap-4 pl-8", pager.page > 0 && "max-md:hidden")}>
+            <li className={cn("relative flex gap-4 pl-8", pager.page > 0 && "hidden")}>
               <span className="absolute left-0 top-1 h-5 w-5 rounded-full border-[3px] border-alert bg-white" aria-hidden />
               <div className="min-w-0 flex-1">
                 <p className="text-base font-semibold sm:text-lg">
@@ -241,8 +233,8 @@ export function FeeTimeline({
               <p className="font-display text-xl font-bold text-alert">{inr(due.total)}</p>
             </li>
           )}
-          {payments.data.map((p, i) => (
-            <li key={p.id} className={cn("relative flex gap-4 pl-8", p.voided && "opacity-60", pager.itemClass(i))}>
+          {pager.slice(payments.data).map((p, i) => (
+            <li key={p.id} className={cn("relative flex gap-4 pl-8", p.voided && "opacity-60")}>
               <span
                 className={cn(
                   "absolute left-0 top-1 h-5 w-5 rounded-full border-[3px]",

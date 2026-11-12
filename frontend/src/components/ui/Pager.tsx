@@ -4,10 +4,10 @@ import { useState, type RefObject } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "./Button";
 
-/** Phones show long lists 10 at a time. md and up keep the full list (with Load more), so desktop is unchanged. */
-export const MOBILE_PAGE_SIZE = 10;
+/** Long lists (players, payments, dues, attendance, fee history) show 10 at a time. */
+export const PAGE_SIZE = 10;
 
-export interface MobilePager {
+export interface ListPager {
   page: number;
   pages: number;
   start: number;
@@ -15,15 +15,15 @@ export interface MobilePager {
   total: number;
   loading: boolean;
   go: (page: number) => void;
-  /** Classes for the item at this index: hidden on phones when it isn't on the current page. */
-  itemClass: (index: number) => string | undefined;
+  /** The current page's items. */
+  slice: <T>(items: T[]) => T[];
 }
 
 /**
  * Pages over a list that may still be loading in chunks from the API. Moving to a page past what's loaded calls
  * loadMore first. The page goes back to 1 whenever resetKey changes (e.g. new search or filters).
  */
-export function useMobilePager({
+export function usePager({
   total,
   loaded,
   loadMore,
@@ -36,17 +36,17 @@ export function useMobilePager({
   resetKey?: string;
   /** Scrolled into view after a page change, so the new page starts at its top. */
   anchor?: RefObject<HTMLElement | null>;
-}): MobilePager {
+}): ListPager {
   const [state, setState] = useState({ key: resetKey, page: 0 });
   const [loading, setLoading] = useState(false);
-  const pages = Math.max(1, Math.ceil(total / MOBILE_PAGE_SIZE));
+  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const page = Math.min(state.key === resetKey ? state.page : 0, pages - 1);
-  const start = page * MOBILE_PAGE_SIZE;
-  const end = start + MOBILE_PAGE_SIZE;
+  const start = page * PAGE_SIZE;
+  const end = start + PAGE_SIZE;
 
   async function go(next: number) {
     if (next < 0 || next >= pages || loading) return;
-    if (Math.min(total, (next + 1) * MOBILE_PAGE_SIZE) > loaded && loadMore) {
+    if (Math.min(total, (next + 1) * PAGE_SIZE) > loaded && loadMore) {
       setLoading(true);
       try {
         await loadMore();
@@ -66,16 +66,16 @@ export function useMobilePager({
     total,
     loading,
     go,
-    itemClass: (i) => (i >= start && i < end ? undefined : "max-md:hidden"),
+    slice: (items) => items.slice(start, end),
   };
 }
 
-/** Previous / next with "11–20 of 34". Phones only; renders nothing for a single page. */
-export function Pager({ pager, label }: { pager: MobilePager; label: string }) {
+/** Previous / next with "11–20 of 34". Renders nothing for a single page. */
+export function Pager({ pager, label }: { pager: ListPager; label: string }) {
   if (pager.pages <= 1) return null;
   const { page, pages, start, total, loading, go } = pager;
   return (
-    <nav aria-label={`${label} pages`} className="mt-4 flex items-center justify-between gap-3 md:hidden">
+    <nav aria-label={`${label} pages`} className="mt-4 flex items-center justify-between gap-3 md:justify-center md:gap-6">
       <Button
         variant="secondary"
         className="px-3"
@@ -87,7 +87,7 @@ export function Pager({ pager, label }: { pager: MobilePager; label: string }) {
       </Button>
       <p className="text-center text-sm text-muted" aria-live="polite">
         <strong className="text-ink">
-          {start + 1}–{Math.min(start + MOBILE_PAGE_SIZE, total)}
+          {start + 1}–{Math.min(start + PAGE_SIZE, total)}
         </strong>{" "}
         of {total}
         <span className="block text-xs">

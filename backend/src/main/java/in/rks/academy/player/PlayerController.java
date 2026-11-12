@@ -16,7 +16,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import java.time.Duration;
-import java.time.LocalDate;
+import java.time.YearMonth;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
@@ -118,13 +118,12 @@ public class PlayerController {
                 .body(file.data());
     }
 
-    @Operation(summary = "Attendance for the heatmap. Defaults to the last 14 weeks.")
+    @Operation(summary = "One calendar month of attendance, e.g. ?month=2026-10. Defaults to the current month.")
     @GetMapping("/players/{id}/attendance")
     public PlayerAttendance attendance(
             @PathVariable long id,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
-        return players.attendance(id, from, to);
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM") YearMonth month) {
+        return players.attendanceMonth(id, month);
     }
 
     @Operation(summary = "Level history and skill scores")

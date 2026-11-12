@@ -44,7 +44,7 @@ export const keys = {
   players: ["players"] as const,
   playerList: (f: PlayerFilters) => ["players", "list", f] as const,
   player: (id: number) => ["players", id] as const,
-  playerAttendance: (id: number) => ["players", id, "attendance"] as const,
+  playerAttendance: (id: number, month: string) => ["players", id, "attendance", month] as const,
   playerProgress: (id: number) => ["players", id, "progress"] as const,
   playerPayments: (id: number) => ["players", id, "payments"] as const,
   attendance: (date: string, batchId: number) => ["attendance", date, batchId] as const,
@@ -144,8 +144,13 @@ export const useAllPlayers = (enabled = true) =>
 export const usePlayer = (id: number) =>
   useQuery({ queryKey: keys.player(id), queryFn: () => api<PlayerDetail>(`/players/${id}`) });
 
-export const usePlayerAttendance = (id: number) =>
-  useQuery({ queryKey: keys.playerAttendance(id), queryFn: () => api<PlayerAttendance>(`/players/${id}/attendance`) });
+/** One calendar month of a player's attendance; month is its first day, e.g. "2026-11-01". */
+export const usePlayerAttendance = (id: number, month: string) =>
+  useQuery({
+    queryKey: keys.playerAttendance(id, month),
+    queryFn: () => api<PlayerAttendance>(`/players/${id}/attendance`, { query: { month: month.slice(0, 7) } }),
+    placeholderData: keepPreviousData,
+  });
 
 export const usePlayerProgress = (id: number) =>
   useQuery({ queryKey: keys.playerProgress(id), queryFn: () => api<Progress>(`/players/${id}/progress`) });

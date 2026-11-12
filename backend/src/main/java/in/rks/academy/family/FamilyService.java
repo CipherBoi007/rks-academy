@@ -21,6 +21,7 @@ import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.YearMonth;
 import java.util.List;
 import java.util.Map;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -83,8 +84,8 @@ public class FamilyService {
         return playerService.get(own(id).getId());
     }
 
-    public PlayerAttendance attendance(long id) {
-        return playerService.attendance(own(id).getId(), null, null);
+    public PlayerAttendance attendance(long id, YearMonth month) {
+        return playerService.attendanceMonth(own(id).getId(), month);
     }
 
     public ProgressDto progress(long id) {

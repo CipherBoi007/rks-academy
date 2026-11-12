@@ -31,6 +31,7 @@ import in.rks.academy.player.PlayerDtos.PlayerSummary;
 import in.rks.academy.player.PlayerDtos.ProgressDto;
 import in.rks.academy.player.PlayerDtos.SkillDto;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -162,6 +163,12 @@ public class PlayerService {
         Player p = load(id);
         files.deleteQuietly(FileStorageService.Kind.PLAYER_PHOTO, p.getPhotoUrl());
         p.setPhotoUrl(null);
+    }
+
+    /** One calendar month of attendance (the profile calendar). Null means the current month. */
+    public PlayerAttendance attendanceMonth(long id, YearMonth month) {
+        YearMonth m = month == null ? YearMonth.from(billing.today()) : month;
+        return attendance(id, m.atDay(1), m.atEndOfMonth());
     }
 
     public PlayerAttendance attendance(long id, LocalDate from, LocalDate to) {
