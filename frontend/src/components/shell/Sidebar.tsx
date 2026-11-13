@@ -29,12 +29,9 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
       )}
       aria-label="Main"
     >
-      {/* Blue, continuing the top bar across the full width. */}
-      <div className={cn("relative flex h-20 items-center border-b border-primary bg-primary px-4", !collapsed && "xl:px-5")}>
-        {/* Covers the sidebar's right border here so the blue band has no seam. */}
-        <span className="absolute inset-y-0 -right-px w-px bg-primary" aria-hidden />
-        <Logo compact onBrand className={cn(!collapsed && "xl:hidden")} />
-        {!collapsed && <Logo onBrand className="hidden xl:flex" />}
+      <div className={cn("flex h-20 items-center border-b border-line px-4", !collapsed && "xl:px-5")}>
+        <Logo compact className={cn(!collapsed && "xl:hidden")} />
+        {!collapsed && <Logo className="hidden xl:flex" />}
       </div>
 
       <nav className="flex-1 space-y-1.5 overflow-y-auto px-3 py-5">

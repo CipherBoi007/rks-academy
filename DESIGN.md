@@ -112,7 +112,7 @@ lucide-react, 20px, stroke 1.75. Mapping: Dashboard `LayoutGrid`, Players `Users
 
 ### 3.0 App shell (every authenticated screen)
 - **Sidebar** (white, right border `line`, 256px): a header block with the 48px crest, "RKS ACADEMY" (Oswald 700 24px `primary`) and "Ramanathapuram, Tamil Nadu" (12px muted), with a divider under it. Nav items are 48px tall, `rounded-xl`, 16px horizontal padding, icon + label at Inter 500 16px. **Active:** `primary` fill, white text, a yellow icon, and a 4px yellow tick on the left edge. Order: Dashboard, Players, Attendance, Fees, Store, Fee Structure. A bottom block, separated by a divider, holds **Sign out** and **Collapse** (`ChevronsLeft`).
-- **Top bar** (`primary` blue, 64px, continuing into the sidebar's blue logo block): "Vanakkam," (12px, white 80%) over "Coach R. Sethupathi" (Inter 600 16px, white) on the left. On the right: a `Bell` with an orange 8px dot and a 44px yellow avatar showing "RS".
+- **Top bar** (white, 64px, bottom border): "Vanakkam," (12px muted) over "Coach R. Sethupathi" (Inter 600 16px) on the left. On the right: a `Bell` with an orange 8px dot and a 44px yellow avatar showing "RS".
 - **Content**: `surface` background, max width roughly 1240px, 32px padding.
 
 ### 3.1 Login
@@ -242,7 +242,7 @@ The backend picks the product through `GET /products/ads?placement=hero|inline|s
 
 | Breakpoint | Shell |
 |---|---|
-| `< md` (< 768) | No sidebar. Sticky 56px top bar in `primary` blue: crest + "RKS ACADEMY" in white on the left, bell + avatar (opens a menu with Fee Structure and Sign out) on the right. Fixed bottom tab bar, 64px plus safe-area: Home, Players, Attendance, Fees, Store. The active tab is a `primary` icon and label with a yellow 3px top tick. Content gets bottom padding equal to the tab bar height. The "Vanakkam" greeting moves into the page content as a small line above the PageHeader on Dashboard. |
+| `< md` (< 768) | No sidebar. Sticky 56px top bar: crest + "RKS ACADEMY" on the left, bell + avatar (opens a menu with Fee Structure and Sign out) on the right. Fixed bottom tab bar, 64px plus safe-area: Home, Players, Attendance, Fees, Store. The active tab is a `primary` icon and label with a yellow 3px top tick. Content gets bottom padding equal to the tab bar height. The "Vanakkam" greeting moves into the page content as a small line above the PageHeader on Dashboard. |
 | `md`–`lg` (768–1023) | Icon-only sidebar (72px), with labels shown as tooltips; no Collapse toggle. The top bar keeps the greeting. |
 | `≥ lg` | Full sidebar as in the screenshots. The Collapse toggle switches between 256 and 72px and the choice is persisted in localStorage. |
 

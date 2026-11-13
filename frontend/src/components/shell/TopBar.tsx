@@ -10,21 +10,18 @@ import { useSignOut } from "./useSignOut";
 
 const menuItem = "flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-[15px] font-medium text-ink hover:bg-surface";
 
-/**
- * "Vanakkam, <name>" on tablet and desktop; logo on phones. A bell with an orange dot and the avatar menu.
- * A blue bar with white text; on md and up it lines up with the sidebar's blue logo block.
- */
+/** "Vanakkam, <name>" on tablet and desktop; logo on phones. A bell with an orange dot and the avatar menu. */
 export function TopBar() {
   const { data: me } = useMe();
   const canSeeFees = useCanSeeFees();
   const signOut = useSignOut();
 
   return (
-    <header className="no-print sticky top-0 z-20 flex h-16 items-center justify-between gap-3 border-b border-primary bg-primary px-4 md:h-20 md:px-8">
-      <Logo onBrand className="md:hidden" />
+    <header className="no-print sticky top-0 z-20 flex h-16 items-center justify-between gap-3 border-b border-line bg-white/95 px-4 backdrop-blur md:h-20 md:px-8">
+      <Logo className="md:hidden" />
       <div className="hidden min-w-0 md:block">
-        <p className="text-sm text-white/80">Vanakkam,</p>
-        <p className="truncate text-base font-semibold text-white">{me?.displayName ?? " "}</p>
+        <p className="text-sm text-ink/70">Vanakkam,</p>
+        <p className="truncate text-base font-semibold">{me?.displayName ?? " "}</p>
       </div>
 
       <div className="flex items-center gap-2 md:gap-4">
@@ -97,10 +94,10 @@ function Notifications({ enabled }: { enabled: boolean }) {
           aria-expanded={open}
           aria-controls={open ? id : undefined}
           aria-label={hasNews ? `Notifications: ${dueCount} players with dues` : "Notifications"}
-          className="relative inline-flex h-11 w-11 items-center justify-center rounded-xl text-white hover:bg-white/10"
+          className="relative inline-flex h-11 w-11 items-center justify-center rounded-xl text-ink hover:bg-surface"
         >
           <Bell className="h-6 w-6" aria-hidden />
-          {hasNews && <span className="absolute right-2.5 top-2 h-2.5 w-2.5 rounded-full bg-alert ring-2 ring-primary" aria-hidden />}
+          {hasNews && <span className="absolute right-2.5 top-2 h-2.5 w-2.5 rounded-full bg-alert ring-2 ring-white" aria-hidden />}
         </button>
       )}
     >
