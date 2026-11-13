@@ -6,7 +6,8 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { Copy, KeyRound, Pencil, UserPlus } from "lucide-react";
+import { KeyRound, Pencil, UserPlus } from "lucide-react";
+import { OneTimePinSheet } from "@/components/domain/OneTimePinSheet";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -262,45 +263,17 @@ function StaffSheet({
   );
 }
 
-/** Shows a one-time PIN once. It is never stored in plain text, so it can't be shown again later. */
 function PinIssued({ issued, onClose }: { issued: StaffWithPin | null; onClose: () => void }) {
-  const [copied, setCopied] = useState(false);
-  useEffect(() => setCopied(false), [issued]);
-  if (!issued) return null;
-
-  async function copy() {
-    try {
-      await navigator.clipboard.writeText(issued!.temporaryPin);
-      setCopied(true);
-    } catch {
-      setCopied(false);
-    }
-  }
-
   return (
-    <Sheet
-      open
+    <OneTimePinSheet
+      pin={issued?.temporaryPin ?? null}
+      description={issued ? `For ${issued.staff.name} · ${formatMobile(issued.staff.mobile)}` : ""}
       onClose={onClose}
-      title="One-time PIN"
-      description={`For ${issued.staff.name} · ${formatMobile(issued.staff.mobile)}`}
-      footer={
-        <Button size="lg" className="w-full" onClick={onClose}>
-          Done
-        </Button>
-      }
     >
-      <div className="space-y-4">
-        <p className="select-all rounded-2xl border border-ink bg-accent px-4 py-5 text-center font-display text-5xl font-bold tracking-[0.3em]">
-          {issued.temporaryPin}
-        </p>
-        <Button variant="secondary" className="w-full" icon={<Copy className="h-4 w-4" aria-hidden />} onClick={copy}>
-          {copied ? "Copied" : "Copy PIN"}
-        </Button>
-        <p className="text-[15px] text-muted">
-          Share it with them in person or by phone. They&apos;ll be asked to choose their own PIN at first sign-in.
-          This PIN won&apos;t be shown again; use Reset PIN if it&apos;s lost.
-        </p>
-      </div>
-    </Sheet>
+      <p className="text-[15px] text-muted">
+        Share it with them in person or by phone. They&apos;ll be asked to choose their own PIN at first sign-in.
+        This PIN won&apos;t be shown again; use Reset PIN if it&apos;s lost.
+      </p>
+    </OneTimePinSheet>
   );
 }

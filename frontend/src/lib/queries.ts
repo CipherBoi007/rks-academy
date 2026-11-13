@@ -15,6 +15,7 @@ import type {
   FeeStatus,
   Level,
   Page,
+  ParentLogin,
   Payment,
   PaymentMode,
   PaymentsSummary,
@@ -47,6 +48,7 @@ export const keys = {
   playerAttendance: (id: number, month: string) => ["players", id, "attendance", month] as const,
   playerProgress: (id: number) => ["players", id, "progress"] as const,
   playerPayments: (id: number) => ["players", id, "payments"] as const,
+  parentLogin: (id: number) => ["players", id, "parent-login"] as const,
   attendance: (date: string, batchId: number) => ["attendance", date, batchId] as const,
   payments: ["payments"] as const,
   paymentList: (f: PaymentFilters) => ["payments", "list", f] as const,
@@ -154,6 +156,10 @@ export const usePlayerAttendance = (id: number, month: string) =>
 
 export const usePlayerProgress = (id: number) =>
   useQuery({ queryKey: keys.playerProgress(id), queryFn: () => api<Progress>(`/players/${id}/progress`) });
+
+/** Owner only: the parent's family-portal sign-in for this player. */
+export const useParentLogin = (id: number) =>
+  useQuery({ queryKey: keys.parentLogin(id), queryFn: () => api<ParentLogin>(`/players/${id}/parent-login`) });
 
 export const usePlayerPayments = (id: number, enabled: boolean) =>
   useQuery({

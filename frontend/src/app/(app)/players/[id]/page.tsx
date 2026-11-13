@@ -4,6 +4,7 @@ import Link from "next/link";
 import { use, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Pencil, Phone, ReceiptIndianRupee, SlidersHorizontal } from "lucide-react";
+import { ParentLoginCard } from "@/components/domain/ParentLoginCard";
 import { AttendanceCard, FeeTimeline, ProfileHeader, ProfileInfoCards, SkillsCard } from "@/components/domain/profile";
 import { PlayerSheet } from "@/components/domain/sheets/PlayerSheet";
 import { RecordPaymentSheet, receiptHref } from "@/components/domain/sheets/RecordPaymentSheet";
@@ -86,6 +87,7 @@ export default function PlayerProfilePage({ params }: { params: Promise<{ id: st
             />
           </div>
           {canSeeFees && <StaffFeeHistory player={player.data} />}
+          {canSeeFees && player.data.active && <ParentLoginCard playerId={id} />}
 
           {progress.data && (
             <SkillsSheet open={editingSkills} onClose={() => setEditingSkills(false)} playerId={id} progress={progress.data} />

@@ -16,13 +16,11 @@ export async function hasHorizontalPageScroll(page: Page) {
   return page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
 }
 
-/** Family sign-in. In dev the WhatsApp provider only logs, so the screen shows the code. */
+/** Family sign-in. Every demo parent has PIN 123456 (db/demo/V7_1). */
 export async function familySignIn(page: Page, mobile: string) {
   await page.goto("/family/login");
   await page.getByLabel("Mobile number").fill(mobile);
-  await page.getByRole("button", { name: "Send code on WhatsApp" }).click();
-  const code = (await page.getByText(/here is the code/).locator("strong").textContent())!.trim();
-  await page.getByLabel(/Code sent to/).fill(code);
+  await page.getByLabel("PIN").fill("123456");
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL(/\/family$/);
 }

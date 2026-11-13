@@ -193,6 +193,21 @@ export interface StaffWithPin {
   temporaryPin: string;
 }
 
+/** Whether a player's parent can sign in to the family portal (owner only). */
+export interface ParentLogin {
+  mobile: string;
+  parentName: string;
+  hasPin: boolean;
+  /** A one-time PIN was issued and hasn't been replaced yet. */
+  mustChangePin: boolean;
+  lastLoginAt: string | null;
+}
+
+export interface IssuedParentPin {
+  login: ParentLogin;
+  temporaryPin: string;
+}
+
 export interface WhatsAppStatus {
   provider: string;
   live: boolean;

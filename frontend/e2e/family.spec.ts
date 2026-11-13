@@ -1,18 +1,17 @@
 import { expect, test } from "@playwright/test";
 import { familySignIn } from "./helpers";
 
-// Codes can be requested once a minute per number, so each test signs in with its own parent:
 // Aravind Murugan's parent, and the parent of siblings Preethi and Pranav. (The responsive sweep uses a third.)
 const ARAVIND_PARENT = "9000000101";
 const SIBLINGS_PARENT = "9000020001";
 
 test.describe.configure({ mode: "serial" });
 
-test("parents sign in with a WhatsApp code and see their child", async ({ page }) => {
+test("parents sign in with their mobile number and PIN and see their child", async ({ page }) => {
   await page.goto("/family");
   await expect(page).toHaveURL(/\/family\/login/);
   await page.getByLabel("Mobile number").fill("12345");
-  await page.getByRole("button", { name: "Send code on WhatsApp" }).click();
+  await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page.getByText("Enter your 10-digit mobile number")).toBeVisible();
 
   await familySignIn(page, ARAVIND_PARENT);

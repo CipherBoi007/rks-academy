@@ -93,18 +93,13 @@ Reminders run at **09:00 IST on the 1st** of every month. Until this section is 
      ```
    - Sample values: `K. Murugan`, `Aravind Murugan`, `RKS101`, `Monthly`, `Nov 2026`, `₹1,500`, `10 Nov 2026`.
    - Approval usually takes minutes to a day.
-   - A second template for family sign-in codes:
-     - Name: `login_code`. Category: **Authentication**. Language: **English**.
-     - Turn on the **Copy code** button.
-     - Meta writes the body for authentication templates ("*{{1}} is your verification code.*").
-   - Until both templates are approved and `cloud` is on, parents can't sign in to the family app, because no code reaches them.
+   - This is the only template. Parents sign in with a PIN, so the family app works without WhatsApp.
 4. **Permanent access token.** Create a System User with the `whatsapp_business_messaging` permission and generate a token. Temporary tokens expire in 24 hours.
 5. **Configure** `.env`:
    ```
    APP_WHATSAPP_PROVIDER=cloud
    APP_WHATSAPP_PHONE_NUMBER_ID=<from the WhatsApp API setup page>
    APP_WHATSAPP_ACCESS_TOKEN=<the permanent token>
-   APP_WHATSAPP_LOGIN_TEMPLATE=login_code
    ```
    Then run `docker compose ... up -d`. The API refuses to start if `cloud` is chosen without both values.
 6. **Test.** In Settings → WhatsApp, send a test message to your own phone. Meta's exact error is shown if anything is wrong, for example "(#132001) Template name does not exist".

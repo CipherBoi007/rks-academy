@@ -123,7 +123,7 @@ public class FeeReminderService {
         String to = INDIA + p.getParentMobile();
 
         WhatsAppSender.Result result = sender.send(
-                new WhatsAppSender.Message(to, templateName, text, params, null));
+                new WhatsAppSender.Message(to, templateName, text, params));
 
         record.setPlayer(p);
         record.setPeriodFrom(q.period().from());

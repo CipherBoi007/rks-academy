@@ -72,7 +72,7 @@ public class WhatsAppSetupController {
                 "₹1,500", monthStart.withDayOfMonth(10).format(DAY));
         String text = FeeReminderService.message(params);
         WhatsAppSender.Result result = sender.send(new WhatsAppSender.Message("91" + req.mobile(),
-                props.whatsapp().cloud().templateName(), text, params, null));
+                props.whatsapp().cloud().templateName(), text, params));
         return new TestResult(result.ok(), sender.name(), result.messageId(), result.error(), text);
     }
 }

@@ -92,7 +92,6 @@ Every table has `id BIGSERIAL PK`, `created_at`, and `updated_at timestamptz`. M
 | `court`, `coach` (V4) | + active (turned off, never deleted) | |
 | `payment` (V4) | + voided_at, voided_by, void_reason | unique(player_id, period_from) **for live payments only** |
 | `parent_account` (V5) | mobile (unique), token_version, last_login_at | access always derived from active players with that parent_mobile |
-| `login_code` (V5) | mobile, HMAC code_hash, expires_at, attempts, used_at | 5-minute codes, 5 attempts, rate-limited per mobile |
 | `fee_reminder` | player_id, period_from, to_mobile, amount, message, status `SENT\|FAILED`, provider, provider_message_id, error, attempts, sent_at | **unique(player_id, period_from)**: one reminder per period |
 
 **One deviation from the brief: FeePolicy.** The brief asks for a single row, but "changes take effect from the next billing cycle" requires the old values to stay in force until then. I'll store **versioned rows**:
@@ -157,7 +156,7 @@ Errors return `ApiError { status, code, message, fieldErrors[], path, timestamp 
 | GET | `/exports/payments.csv` · `/dues.csv` · `/players.csv` · `/attendance.csv` | UTF-8 CSV, formula-safe, up to 1 year per export | owner |
 | POST | `/products/images` · `/products/{id}/restore` | product photo upload (JPG/PNG/WebP ≤ 2 MB); restore an archived product | owner |
 | GET / POST | `/notifications/whatsapp` · `/notifications/whatsapp/test` | WhatsApp setup status; send one test message | owner |
-| POST | `/family/auth/request-code` · `/family/auth/verify` | parent sign-in with a WhatsApp code (rate-limited, no enumeration) | public |
+| POST | `/family/auth/login` · `/family/auth/set-pin` | parent sign-in with mobile + PIN (lockout, no enumeration) | public |
 | GET | `/family/me` · `/family/children/{id}` (+ `/attendance`, `/progress`, `/payments`, `/due`) · `/family/receipts/{yy}/{n}` | the parent's own children only; anything else is 404 | parent |
 | GET | `/family/shop/products` (`/{id}`, `/{id}/related`) · `/family/shop/ads?placement=` | shop and offers (offers exist only here) | parent |
 | POST | `/auth/change-pin` | required before anything else when `mustChangePin` | any |

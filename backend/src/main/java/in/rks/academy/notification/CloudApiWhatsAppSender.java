@@ -3,7 +3,6 @@ package in.rks.academy.notification;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import in.rks.academy.config.AppProperties;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
@@ -57,13 +56,8 @@ public class CloudApiWhatsAppSender implements WhatsAppSender {
     @Override
     public Result send(Message message) {
         String toMobile = message.toMobile();
-        List<Map<String, Object>> components = new ArrayList<>();
-        components.add(Map.of("type", "body", "parameters", textParams(message.bodyParams())));
-        if (message.buttonParam() != null) {
-            // Authentication templates carry the code again behind their "Copy code" button.
-            components.add(Map.of("type", "button", "sub_type", "url", "index", "0",
-                    "parameters", textParams(List.of(message.buttonParam()))));
-        }
+        List<Map<String, Object>> components =
+                List.of(Map.of("type", "body", "parameters", textParams(message.bodyParams())));
         Map<String, Object> body = Map.of(
                 "messaging_product", "whatsapp",
                 "to", toMobile,

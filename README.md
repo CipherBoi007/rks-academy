@@ -103,7 +103,7 @@ Supabase (PostgreSQL, Singapore)        all data + uploaded photos, in schema "r
 
 cron-job.org ──every 14 min──▶ Render /actuator/health     (keeps Render awake; also touches the database)
 GitHub Actions ──every 3 days──▶ Supabase query + encrypted backup (keeps Supabase awake)
-Render API ──▶ graph.facebook.com (WhatsApp Cloud API)    (fee reminders, parent sign-in codes)
+Render API ──▶ graph.facebook.com (WhatsApp Cloud API)    (fee reminders only)
 ```
 
 ### Three ideas to keep in mind
@@ -274,10 +274,9 @@ Example: the owner opens a player's profile, which calls `GET /api/v1/players/42
 | `POST /api/auth/login` | `POST /api/v1/auth/login` | sets `rks_session` |
 | `POST /api/auth/change-pin` | `POST /api/v1/auth/change-pin` | replaces `rks_session` (new session version) |
 | `POST /api/auth/logout` | none | clears `rks_session` |
-| `POST /api/family-auth/verify` | `POST /api/v1/family/auth/verify` | sets `rks_family` |
+| `POST /api/family-auth/login` | `POST /api/v1/family/auth/login` | sets `rks_family` (not for a one-time PIN) |
+| `POST /api/family-auth/set-pin` | `POST /api/v1/family/auth/set-pin` | sets or replaces `rks_family` |
 | `POST /api/family-auth/logout` | none | clears `rks_family` |
-
-Requesting a family code (`/api/v1/family/auth/request-code`) sets no cookie, so it goes through the normal proxy.
 
 **Cookie settings:** `httpOnly`, `SameSite=Lax`, `Secure` in production, `path=/`. Each expires with its token.
 
@@ -302,20 +301,25 @@ Every `admin_user` and `parent_account` row has a `token_version`. It is copied 
 The version is incremented when:
 - the PIN is changed or reset
 - a staff login is turned off
-- a parent chooses **sign out everywhere**
+- a parent chooses **sign out everywhere**, changes their PIN, or the owner issues them a new one
 
 So **one database update signs that person out of every device instantly**, without a token blacklist.
 
-### Parents: mobile + WhatsApp code
+### Parents: mobile + PIN
 
-1. `POST /api/v1/family/auth/request-code` with `{ mobile }`. If the number belongs to an active player's parent, the API creates a **6-digit code** and sends it with the WhatsApp **authentication template** `login_code`.
-   - Only an **HMAC-SHA256 hash** of the code is stored, in `login_code`.
-   - A code is valid for **5 minutes** and allows **5 tries**.
-   - A new code can be requested once **per minute**, at most **5 per hour** per number.
-   - The response is the same whether or not the number is registered, so nobody can probe which numbers are parents.
-2. `POST /api/v1/family/auth/verify` with `{ mobile, code }` returns a family JWT: claim `kind: "family"`, subject = `parent_account.id`, lasting `APP_JWT_FAMILY_TTL` (default 30 days).
-3. **Access is re-checked on every request:** the parent must still have **at least one active player** with that mobile number. Deactivating the child or changing the number ends access immediately.
-4. **Dev only:** with the `log` WhatsApp provider and `app.family.expose-dev-codes=true` (set in `application-dev.yml`), the code is returned to the sign-in screen. This can never happen in production.
+Parents sign in like staff, with no message sent, so sign-in costs nothing however often the form is used. (Until V7 a code was sent on WhatsApp, which Meta bills per message.)
+
+1. **The owner issues a one-time PIN** from the player's profile (**Parent app → Create PIN / Reset PIN**): `POST /api/v1/players/{id}/parent-login/pin`, owner only.
+   - It creates the `parent_account` for the player's parent mobile if needed, stores a **bcrypt hash** in `pin_hash`, sets `must_change_pin` and bumps `token_version` (signing the parent out everywhere).
+   - The PIN is shown once. The owner passes it on in person, by phone, or with **Send from my WhatsApp** (opens the owner's own WhatsApp; nothing goes through the academy's paid number).
+   - Brothers and sisters share one sign-in, because it belongs to the parent's mobile number. Reset PIN is also the fix for a forgotten PIN.
+2. `POST /api/v1/family/auth/login` with `{ mobile, pin }`.
+   - A wrong number and a wrong PIN get the same `401`, so nobody can probe which numbers are parents.
+   - **5 wrong PINs in a row lock the number for 5 minutes** (`LoginAttemptLimiter`, kept apart from staff lockouts).
+   - With a one-time PIN the answer is `{ mustChangePin: true }` and **no token**.
+3. `POST /api/v1/family/auth/set-pin` with `{ mobile, currentPin, newPin }` replaces the PIN (6 to 12 digits, easy ones refused) and returns a family JWT: claim `kind: "family"`, subject = `parent_account.id`, lasting `APP_JWT_FAMILY_TTL` (default 30 days). The portal's **Change PIN** uses the same endpoint.
+4. **Access is re-checked on every request:** the parent must still have **at least one active player** with that mobile number. Deactivating the child or changing the number ends access immediately.
+5. **Dev only:** `db/demo/V7_1` gives every demo parent PIN `123456`.
 
 ### Staff and family are fully separate
 
@@ -370,7 +374,7 @@ Code is grouped **by feature**, not by layer.
 | `product` | The shop: products, images, specs, variants, ads | `ProductService`, `ProductController` |
 | `export` | CSV exports | `ExportService`, `Csv` |
 | `notification` | Fee reminders and WhatsApp | `FeeReminderService`, `FeeReminderScheduler`, `WhatsAppSender` + `LogWhatsAppSender` / `CloudApiWhatsAppSender`, `WhatsAppSetupController` |
-| `family` | Parent sign-in and the family API | `FamilyAuthService`, `FamilyService`, `FamilyController`, `ParentAccount`, `LoginCode` |
+| `family` | Parent sign-in and the family API | `FamilyAuthService`, `FamilyService`, `FamilyController`, `ParentAccount` |
 | `config` | Typed settings, clock, web config, public config | `AppProperties`, `ClockConfig`, `WebConfig`, `PublicConfigController` |
 | `common` | Shared pieces | `ApiException`, `GlobalExceptionHandler`, `ApiError`, `PageResponse`, `FileStorageService`, `IndianRupeeWords` |
 | `setup` | The one-time production owner setup | `OwnerSetupRunner` |
@@ -441,7 +445,7 @@ All endpoints are under `/api/v1`, JSON in and out. The full, live list is in Sw
 | Exports | `GET /exports/{payments,dues,players,attendance}.csv` | owner |
 | Reminders | `POST /notifications/fee-reminders` (send now), `GET …` (log), `GET …/status` | owner |
 | WhatsApp | `GET /notifications/whatsapp` (status), `POST /notifications/whatsapp/test` | owner |
-| Family | `POST /family/auth/request-code`, `POST /family/auth/verify`, `GET /family/me`, `POST /family/sign-out-everywhere`, `GET /family/children/{id}` (+ `/attendance`, `/progress`, `/payments`, `/due`), `GET /family/receipts/{yy}/{n}`, `GET /family/shop/products` (+ `/{id}`, `/{id}/related`), `GET /family/shop/ads` | parent |
+| Family | `POST /family/auth/login`, `POST /family/auth/set-pin`, `GET /family/me`, `POST /family/sign-out-everywhere`, `GET /family/children/{id}` (+ `/attendance`, `/progress`, `/payments`, `/due`), `GET /family/receipts/{yy}/{n}`, `GET /family/shop/products` (+ `/{id}`, `/{id}/related`), `GET /family/shop/ads` | parent |
 | Health | `GET /actuator/health` (outside `/api`; no proxy key needed) | public |
 
 ---
@@ -459,11 +463,12 @@ The schema is created and evolved **only** by Flyway scripts, which run automati
 | `V3__fee_reminders.sql` | `fee_reminder`: one row per player per billing period |
 | `V4__admin_and_voids.sql` | Staff-login columns (token version, forced PIN change) and payment voids |
 | `V5__family_portal.sql` | `parent_account`, `login_code` |
+| `V7__family_pins.sql` | parent PINs (`pin_hash`, `must_change_pin`); drops `login_code` |
 | `V6__stored_files_and_rls.sql` | `stored_file` (uploaded images), and **row-level security switched on** for every table |
 | `db/demo/V2_1 … V2_5` | **Dev only:** demo staff logins, players, payments, attendance, products |
 | `db/demo/V6_1` | **Dev only:** moves the demo logins' PIN from `1234` to `123456` (PINs became 6–12 digits) |
 
-**Tables:** `court`, `coach`, `admin_user`, `batch`, `fee_plan`, `fee_plan_perk`, `fee_policy`, `player`, `player_level_history`, `player_skill`, `attendance_record`, `payment`, `receipt_sequence`, `product`, `product_image`, `product_spec`, `product_variant`, `fee_reminder`, `parent_account`, `login_code`, `stored_file`, plus Flyway's own `flyway_schema_history`.
+**Tables:** `court`, `coach`, `admin_user`, `batch`, `fee_plan`, `fee_plan_perk`, `fee_policy`, `player`, `player_level_history`, `player_skill`, `attendance_record`, `payment`, `receipt_sequence`, `product`, `product_image`, `product_spec`, `product_variant`, `fee_reminder`, `parent_account`, `stored_file`, plus Flyway's own `flyway_schema_history`.
 
 **Rules for migrations:**
 - **Never edit a migration that has run anywhere.** Flyway checksums every script and refuses to start if one changes. Add a new `V7__what_it_does.sql` instead.
@@ -549,7 +554,6 @@ At **09:00 IST on the 1st of every month** (`APP_REMINDERS_CRON`, default `0 0 9
 | Name | Category | Language | Body | Parameters |
 |---|---|---|---|---|
 | `fee_reminder` | Utility | English (`en`) | `Vanakkam {{1}}! Fee reminder from RKS Academy for {{2}} ({{3}}): {{4}} plan for {{5}} is {{6}}. Please pay by {{7}} to avoid a late fee. Thank you!` | parent name, player name, player ID, plan, period, amount, pay-by date |
-| `login_code` | **Authentication** (Copy code button) | English (`en`) | written by Meta: "{{1}} is your verification code." | the code (sent in the body and in the button) |
 
 Choose **English (`en`)**, not "English (US)" (`en_US`). The app sends language code `en` (`APP_WHATSAPP_TEMPLATE_LANG`).
 
@@ -695,7 +699,7 @@ The backend reads **environment variables** (Spring doesn't read `.env` files by
 | `APP_ACADEMY_PHONE` | `+91 00000 00000` | Printed on receipts |
 | `APP_WHATSAPP_PROVIDER` | `log` | `log` or `cloud` |
 | `APP_WHATSAPP_PHONE_NUMBER_ID` / `APP_WHATSAPP_ACCESS_TOKEN` | *(empty)* | Required for `cloud`; the API refuses to start without them |
-| `APP_WHATSAPP_TEMPLATE` / `APP_WHATSAPP_LOGIN_TEMPLATE` / `APP_WHATSAPP_TEMPLATE_LANG` | `fee_reminder` / `login_code` / `en` | Template names and language |
+| `APP_WHATSAPP_TEMPLATE` / `APP_WHATSAPP_TEMPLATE_LANG` | `fee_reminder` / `en` | Template name and language |
 | `APP_WHATSAPP_API_URL` | `https://graph.facebook.com/v23.0` | Bump the version when Meta retires it |
 | `APP_REMINDERS_ENABLED` / `APP_REMINDERS_CRON` | `true` / `0 0 9 1 * *` | The cron runs in Asia/Kolkata. Keep it `false` until WhatsApp is live. |
 | `APP_API_DOCS` | `false` | Swagger outside dev (keep it off in production) |
@@ -728,7 +732,7 @@ The frontend has **no `NEXT_PUBLIC_*` variables**: nothing secret or configurabl
 3. Build and start the web app, or use `npm run dev`, which works but is slower on first page loads.
 4. `npm run test:e2e`. If Playwright's Chromium download is blocked, use an installed browser: `E2E_CHANNEL=msedge npm run test:e2e` (or `chrome`).
 
-Family sign-in codes are rate-limited per number: 1 a minute, 5 an hour. Running the family tests many times in a row can hit that limit, which is the limit working as intended. Recreate the database, or wait.
+Five wrong family PINs lock that number for 5 minutes (in memory, so restarting the API clears it).
 
 ---
 
@@ -833,7 +837,6 @@ Practise a restore on a spare Supabase project once. **Without the passphrase a 
 - **Errors** never include stack traces or internal messages.
 - **Secrets** are only in environment variables. The `deploy/secrets/` folder is git-ignored. Production has no seeded logins and API docs are off.
 - **Headers:** CSP, HSTS, frame denial, nosniff, a referrer policy and a permissions policy.
-- **Known trade-off:** anyone can ask for sign-in codes to be sent to registered parent numbers, within the per-number limits, and each WhatsApp message costs a little. Watch Meta's billing; add a global hourly cap if it's ever abused.
 
 ---
 
@@ -849,7 +852,7 @@ Practise a restore on a spare Supabase project once. **Without the passphrase a 
 | Send this month's reminders now | Fees → Pending → Send now (people already reminded are skipped) |
 | Check WhatsApp | Settings → WhatsApp: shows the mode and any issues; **Send test** to a number |
 | Give the accountant data | Fees → Export: payments, dues, players or attendance CSV |
-| A parent can't sign in | The number must match an **active** player's parent mobile exactly. WhatsApp must be `cloud` with an approved `login_code` template. Check the per-number limits (1/min, 5/hour). |
+| A parent can't sign in | The number must match an **active** player's parent mobile exactly. Issue a new one-time PIN from the player's profile (Parent app → Reset PIN); it also clears a 5-minute lockout. |
 | Change the reminder time | `APP_REMINDERS_CRON` (Spring cron with seconds, Asia/Kolkata), e.g. `0 30 8 1 * *` for 08:30 on the 1st |
 | Rotate the JWT secret | Change `APP_JWT_SECRET` on Render. Everyone is signed out. |
 | Rotate the proxy key | Change `APP_PROXY_KEY` (Render) **and** `BACKEND_PROXY_KEY` (Vercel) to the same new value, then redeploy both |

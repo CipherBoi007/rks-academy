@@ -2,6 +2,9 @@ package in.rks.academy.player;
 
 import in.rks.academy.common.FileStorageService;
 import in.rks.academy.common.PageResponse;
+import in.rks.academy.family.FamilyAuthService;
+import in.rks.academy.family.FamilyAuthService.IssuedParentPin;
+import in.rks.academy.family.FamilyAuthService.ParentLogin;
 import in.rks.academy.player.PlayerDtos.FeeStatus;
 import in.rks.academy.player.PlayerDtos.PhotoResponse;
 import in.rks.academy.player.PlayerDtos.PlayerAttendance;
@@ -45,10 +48,12 @@ public class PlayerController {
 
     private final PlayerService players;
     private final FileStorageService files;
+    private final FamilyAuthService family;
 
-    public PlayerController(PlayerService players, FileStorageService files) {
+    public PlayerController(PlayerService players, FileStorageService files, FamilyAuthService family) {
         this.players = players;
         this.files = files;
+        this.family = family;
     }
 
     @Operation(summary = "Search and filter players. q matches name or code (e.g. RKS105).")
@@ -89,6 +94,20 @@ public class PlayerController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deactivate(@PathVariable long id) {
         players.deactivate(id);
+    }
+
+    @Operation(summary = "Whether the player's parent can sign in to the family portal")
+    @PreAuthorize("hasRole('OWNER')")
+    @GetMapping("/players/{id}/parent-login")
+    public ParentLogin parentLogin(@PathVariable long id) {
+        return family.parentLogin(id);
+    }
+
+    @Operation(summary = "Issue the parent a one-time PIN (shown once), replacing any PIN they had")
+    @PreAuthorize("hasRole('OWNER')")
+    @PostMapping("/players/{id}/parent-login/pin")
+    public ResponseEntity<IssuedParentPin> issueParentPin(@PathVariable long id) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(family.issuePin(id));
     }
 
     @Operation(summary = "Upload a photo (JPG, PNG or WebP, up to 2 MB)")

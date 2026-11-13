@@ -26,7 +26,7 @@ import org.springframework.web.client.RestClient;
 class CloudApiWhatsAppSenderTest {
 
     static final AppProperties.WhatsApp.Cloud CONFIG = new AppProperties.WhatsApp.Cloud(
-            "https://graph.facebook.com/v21.0", "1234567890", "test-token", "fee_reminder", "login_code", "en");
+            "https://graph.facebook.com/v21.0", "1234567890", "test-token", "fee_reminder", "en");
 
     MockRestServiceServer server;
     CloudApiWhatsAppSender sender;
@@ -72,8 +72,7 @@ class CloudApiWhatsAppSenderTest {
 
         WhatsAppSender.Result result = sender.send(new WhatsAppSender.Message("919000000101", "fee_reminder",
                 "ignored by the API",
-                List.of("K. Murugan", "Aravind Murugan", "RKS101", "Monthly", "Dec 2026", "₹1,500", "10 Dec 2026"),
-                null));
+                List.of("K. Murugan", "Aravind Murugan", "RKS101", "Monthly", "Dec 2026", "₹1,500", "10 Dec 2026")));
 
         server.verify();
         assertThat(result.ok()).isTrue();
@@ -105,38 +104,13 @@ class CloudApiWhatsAppSenderTest {
         assertThat(result.error()).isEqualTo("WhatsApp API 503");
     }
 
-    @Test
-    void loginCodesUseTheAuthenticationTemplateWithACopyCodeButton() {
-        server.expect(requestTo("https://graph.facebook.com/v21.0/1234567890/messages"))
-                .andExpect(content().json("""
-                        {
-                          "messaging_product": "whatsapp",
-                          "to": "919000000101",
-                          "type": "template",
-                          "template": {
-                            "name": "login_code",
-                            "language": {"code": "en"},
-                            "components": [
-                              {"type": "body", "parameters": [{"type": "text", "text": "482913"}]},
-                              {"type": "button", "sub_type": "url", "index": "0",
-                               "parameters": [{"type": "text", "text": "482913"}]}
-                            ]
-                          }
-                        }""", JsonCompareMode.STRICT))
-                .andRespond(withSuccess("{\"messages\":[{\"id\":\"wamid.X\"}]}", MediaType.APPLICATION_JSON));
-
-        assertThat(sender.send(new WhatsAppSender.Message("919000000101", "login_code", "x", List.of("482913"),
-                "482913")).ok()).isTrue();
-        server.verify();
-    }
-
     static WhatsAppSender.Message message() {
-        return new WhatsAppSender.Message("919000000101", "fee_reminder", "x", List.of("a"), null);
+        return new WhatsAppSender.Message("919000000101", "fee_reminder", "x", List.of("a"));
     }
 
     @Test
     void refusesToStartWithoutCredentials() {
-        var missing = new AppProperties.WhatsApp.Cloud("https://graph.facebook.com/v21.0", "", "", "t", "l", "en");
+        var missing = new AppProperties.WhatsApp.Cloud("https://graph.facebook.com/v21.0", "", "", "t", "en");
         org.assertj.core.api.Assertions.assertThatThrownBy(
                         () -> CloudApiWhatsAppSender.clientFor(missing, RestClient.builder()))
                 .isInstanceOf(IllegalStateException.class)

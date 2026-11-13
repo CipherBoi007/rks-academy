@@ -19,9 +19,6 @@ springdoc:
     enabled: true
 
 app:
-  family:
-    # Dev only: with the "log" WhatsApp provider no code is really sent, so return it to the sign-in screen.
-    expose-dev-codes: true
   jwt:
     secret: ${APP_JWT_SECRET:dev-only-secret-change-me-0123456789abcdef}
 

@@ -42,8 +42,7 @@ class FeeReminderServiceTest {
     @BeforeEach
     void setUp() {
         AppProperties props = new AppProperties(null, "http://localhost", "910000000000", "",
-                new AppProperties.WhatsApp("log", new AppProperties.WhatsApp.Cloud("", "", "", "fee_reminder",
-                        "login_code", "en")),
+                new AppProperties.WhatsApp("log", new AppProperties.WhatsApp.Cloud("", "", "", "fee_reminder", "en")),
                 null, null);
         service = new FeeReminderService(billing, policies, repo, sender, props, NOV_1);
         when(policies.allTerms()).thenReturn(List.of(POLICY));

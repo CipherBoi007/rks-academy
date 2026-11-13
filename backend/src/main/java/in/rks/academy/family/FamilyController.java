@@ -5,7 +5,6 @@ import in.rks.academy.billing.BillingDtos.QuoteDto;
 import in.rks.academy.billing.BillingDtos.ReceiptDto;
 import in.rks.academy.common.ApiException;
 import in.rks.academy.common.PageResponse;
-import in.rks.academy.family.FamilyAuthService.CodeRequested;
 import in.rks.academy.family.FamilyAuthService.FamilySession;
 import in.rks.academy.family.FamilyService.Family;
 import in.rks.academy.player.PlayerDtos.PlayerAttendance;
@@ -37,20 +36,22 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-/** The family portal API: sign-in by WhatsApp code, then read-only access to the parent's own children. */
+/** The family portal API: sign-in by mobile number and PIN, then read-only access to the parent's own children. */
 @Tag(name = "Family portal")
 @Validated
 @RestController
 @RequestMapping("/api/v1/family")
 public class FamilyController {
 
-    public record CodeRequest(
-            @NotBlank @Pattern(regexp = "\\d{10}", message = "Enter your 10-digit mobile number") String mobile) {
+    public record LoginRequest(
+            @NotBlank @Pattern(regexp = "\\d{10}", message = "Enter your 10-digit mobile number") String mobile,
+            @NotBlank @Pattern(regexp = "\\d{6,12}", message = "Enter your PIN (6 to 12 digits)") String pin) {
     }
 
-    public record VerifyRequest(
+    public record SetPinRequest(
             @NotBlank @Pattern(regexp = "\\d{10}", message = "Enter your 10-digit mobile number") String mobile,
-            @NotBlank @Pattern(regexp = "\\d{6}", message = "The code has 6 digits") String code) {
+            @NotBlank @Pattern(regexp = "\\d{6,12}", message = "Enter your current PIN") String currentPin,
+            @NotBlank @Pattern(regexp = "\\d{6,12}", message = "PIN is 6 to 12 digits") String newPin) {
     }
 
     private final FamilyAuthService auth;
@@ -65,16 +66,18 @@ public class FamilyController {
 
     // ---- Sign-in (public) ---------------------------------------------------------------------------------
 
-    @Operation(summary = "Send a sign-in code on WhatsApp to a parent's mobile number")
-    @PostMapping("/auth/request-code")
-    public ResponseEntity<CodeRequested> requestCode(@Valid @RequestBody CodeRequest req) {
-        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(auth.requestCode(req.mobile()));
+    @Operation(summary = "Sign in with the parent's mobile number and PIN. A one-time PIN returns mustChangePin "
+            + "and no token: call set-pin with it first.")
+    @PostMapping("/auth/login")
+    public ResponseEntity<FamilySession> login(@Valid @RequestBody LoginRequest req) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(auth.login(req.mobile(), req.pin()));
     }
 
-    @Operation(summary = "Exchange the code for a family session token")
-    @PostMapping("/auth/verify")
-    public ResponseEntity<FamilySession> verify(@Valid @RequestBody VerifyRequest req) {
-        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(auth.verify(req.mobile(), req.code()));
+    @Operation(summary = "Replace the parent's PIN (the one-time PIN, or their own) and sign in")
+    @PostMapping("/auth/set-pin")
+    public ResponseEntity<FamilySession> setPin(@Valid @RequestBody SetPinRequest req) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+                .body(auth.setPin(req.mobile(), req.currentPin(), req.newPin()));
     }
 
     // ---- The parent's own children ------------------------------------------------------------------------

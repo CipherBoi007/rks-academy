@@ -168,7 +168,7 @@ Practise this once on a spare Supabase project. A backup you've never restored i
 
 ## 8. WhatsApp (Meta), from zero
 
-You need this for both **fee reminders** and **parent sign-in codes**. Until it's done, parents can't sign in to the family app. Staff logins work without it.
+You need this only for **fee reminders**. Staff and parents sign in with a mobile number and PIN, so both apps work without it.
 
 **A. Accounts (one-time, ~20 minutes)**
 
@@ -188,10 +188,7 @@ You need this for both **fee reminders** and **parent sign-in codes**. Until it'
      Vanakkam {{1}}! Fee reminder from RKS Academy for {{2}} ({{3}}): {{4}} plan for {{5}} is {{6}}. Please pay by {{7}} to avoid a late fee. Thank you!
      ```
    - Samples: `K. Murugan`, `Aravind Murugan`, `RKS101`, `Monthly`, `Nov 2026`, `₹1,500`, `10 Nov 2026`.
-2. **`login_code`**
-   - Category: **Authentication**.
-   - Code delivery: **Copy code**.
-   - Meta writes the text ("*{{1}} is your verification code.*"). Optionally add the security note and a 5-minute expiry; codes expire after 5 minutes anyway.
+This is the only template: parents sign in with a mobile number and PIN, so nothing else is sent on WhatsApp.
 
 Approval usually takes minutes, sometimes up to a day.
 
@@ -240,7 +237,7 @@ Approval usually takes minutes, sometimes up to a day.
 - [ ] The owner has signed in and changed the one-time PIN; each coach has their own login
 - [ ] cron-job.org is pinging every 14 minutes, with failure emails on
 - [ ] "Keep database awake" ran successfully once by hand, and a backup was restored on a spare project
-- [ ] The WhatsApp test message and a parent sign-in code both arrived
+- [ ] The WhatsApp test message arrived
 - [ ] `APP_REMINDERS_ENABLED=true` only after WhatsApp is live
 - [ ] `APP_WHATSAPP_NUMBER` and `APP_ACADEMY_PHONE` are the academy's real numbers
 - [ ] The trial-week checklist in [README.md](README.md#7-trial-week-checklist)

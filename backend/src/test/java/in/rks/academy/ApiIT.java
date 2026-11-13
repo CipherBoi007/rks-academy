@@ -435,28 +435,21 @@ class ApiIT {
 
     @Test
     @Order(20)
-    void parentsSignInWithAWhatsAppCode() throws Exception {
-        JsonNode sent = json.readTree(call(null, HttpMethod.POST, "/family/auth/request-code",
-                Map.of("mobile", "9000000101")).getBody());
-        String code = sent.get("devCode").asText();
-        assertThat(code).matches("\\d{6}");
+    void parentsSignInWithTheirMobileNumberAndPin() throws Exception {
+        JsonNode session = json.readTree(call(null, HttpMethod.POST, "/family/auth/login",
+                Map.of("mobile", "9000000101", "pin", "123456")).getBody());
+        assertThat(session.get("mustChangePin").asBoolean()).isFalse();
+        String token = session.get("token").asText();
 
-        assertThat(call(null, HttpMethod.POST, "/family/auth/request-code", Map.of("mobile", "9000000101"))
-                .getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
-
-        // An unknown number gets the same answer, so the form can't reveal who is a member.
-        JsonNode unknown = json.readTree(call(null, HttpMethod.POST, "/family/auth/request-code",
-                Map.of("mobile", "9999999999")).getBody());
-        assertThat(unknown.get("message").asText()).isEqualTo(sent.get("message").asText());
-        assertThat(unknown.get("devCode").isNull()).isTrue();
-
-        String wrong = code.equals("000000") ? "111111" : "000000";
-        assertThat(call(null, HttpMethod.POST, "/family/auth/verify", Map.of("mobile", "9000000101", "code", wrong))
-                .getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
-        String token = json.readTree(call(null, HttpMethod.POST, "/family/auth/verify",
-                Map.of("mobile", "9000000101", "code", code)).getBody()).get("token").asText();
-        assertThat(call(null, HttpMethod.POST, "/family/auth/verify", Map.of("mobile", "9000000101", "code", code))
-                .getStatusCode()).as("a code works once").isEqualTo(HttpStatus.UNAUTHORIZED);
+        // A wrong PIN and an unknown number get the same answer, so the form can't reveal who is a member.
+        ResponseEntity<String> wrong = call(null, HttpMethod.POST, "/family/auth/login",
+                Map.of("mobile", "9000000101", "pin", "654987"));
+        ResponseEntity<String> unknown = call(null, HttpMethod.POST, "/family/auth/login",
+                Map.of("mobile", "9999999999", "pin", "123456"));
+        assertThat(wrong.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(unknown.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(json.readTree(unknown.getBody()).get("message").asText())
+                .isEqualTo(json.readTree(wrong.getBody()).get("message").asText());
 
         JsonNode me = get(token, "/family/me");
         assertThat(me.get("parentName").asText()).isEqualTo("K. Murugan");
@@ -509,15 +502,49 @@ class ApiIT {
 
     @Test
     @Order(22)
-    void aCodeStopsWorkingAfterFiveWrongTries() throws Exception {
-        String code = json.readTree(call(null, HttpMethod.POST, "/family/auth/request-code",
-                Map.of("mobile", "9000020002")).getBody()).get("devCode").asText();
-        String wrong = code.equals("000000") ? "111111" : "000000";
-        for (int i = 0; i < 5; i++) {
-            call(null, HttpMethod.POST, "/family/auth/verify", Map.of("mobile", "9000020002", "code", wrong));
-        }
-        assertThat(call(null, HttpMethod.POST, "/family/auth/verify", Map.of("mobile", "9000020002", "code", code))
+    void theOwnerIssuesAOneTimePinThatMustBeReplaced() throws Exception {
+        String before = familyLogin("9000000101");
+        JsonNode status = get(owner, "/players/1/parent-login");
+        assertThat(status.get("mobile").asText()).isEqualTo("9000000101");
+        assertThat(status.get("hasPin").asBoolean()).isTrue();
+        assertThat(call(coach, HttpMethod.POST, "/players/1/parent-login/pin", null).getStatusCode())
+                .as("only the owner issues parent PINs").isEqualTo(HttpStatus.FORBIDDEN);
+
+        JsonNode issued = json.readTree(call(owner, HttpMethod.POST, "/players/1/parent-login/pin", null).getBody());
+        String oneTime = issued.get("temporaryPin").asText();
+        assertThat(oneTime).matches("\\d{6}");
+        assertThat(issued.get("login").get("mustChangePin").asBoolean()).isTrue();
+
+        // The new PIN replaces the old one and signs the parent out everywhere.
+        assertThat(call(before, HttpMethod.GET, "/family/me", null).getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(call(null, HttpMethod.POST, "/family/auth/login", Map.of("mobile", "9000000101", "pin", "123456"))
                 .getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        // The one-time PIN opens nothing until the parent chooses their own.
+        JsonNode first = json.readTree(call(null, HttpMethod.POST, "/family/auth/login",
+                Map.of("mobile", "9000000101", "pin", oneTime)).getBody());
+        assertThat(first.get("mustChangePin").asBoolean()).isTrue();
+        assertThat(first.get("token").isNull()).isTrue();
+        assertThat(call(null, HttpMethod.POST, "/family/auth/set-pin",
+                Map.of("mobile", "9000000101", "currentPin", oneTime, "newPin", "111111")).getStatusCode())
+                .isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+        String token = json.readTree(call(null, HttpMethod.POST, "/family/auth/set-pin",
+                Map.of("mobile", "9000000101", "currentPin", oneTime, "newPin", "583920")).getBody())
+                .get("token").asText();
+        assertThat(call(token, HttpMethod.GET, "/family/me", null).getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(get(owner, "/players/1/parent-login").get("mustChangePin").asBoolean()).isFalse();
+        assertThat(call(null, HttpMethod.POST, "/family/auth/login", Map.of("mobile", "9000000101", "pin", "583920"))
+                .getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    @Order(22)
+    void fiveWrongPinsLockTheNumberForAWhile() throws Exception {
+        for (int i = 0; i < 5; i++) {
+            call(null, HttpMethod.POST, "/family/auth/login", Map.of("mobile", "9000020002", "pin", "654987"));
+        }
+        assertThat(call(null, HttpMethod.POST, "/family/auth/login", Map.of("mobile", "9000020002", "pin", "123456"))
+                .getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
     }
 
     @Test
@@ -529,11 +556,10 @@ class ApiIT {
         assertThat(call(token, HttpMethod.GET, "/family/me", null).getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
+    /** Demo parents all have PIN 123456 (db/demo/V7_1). */
     String familyLogin(String mobile) throws Exception {
-        String code = json.readTree(call(null, HttpMethod.POST, "/family/auth/request-code",
-                Map.of("mobile", mobile)).getBody()).get("devCode").asText();
-        return json.readTree(call(null, HttpMethod.POST, "/family/auth/verify",
-                Map.of("mobile", mobile, "code", code)).getBody()).get("token").asText();
+        return json.readTree(call(null, HttpMethod.POST, "/family/auth/login",
+                Map.of("mobile", mobile, "pin", "123456")).getBody()).get("token").asText();
     }
 
     // ---- helpers ----------------------------------------------------------------------------------------------

@@ -4,9 +4,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import type { ReactNode } from "react";
-import { Home, LogOut, ShoppingBag, type LucideIcon } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { Home, KeyRound, LogOut, ShoppingBag, type LucideIcon } from "lucide-react";
+import { ChangePinSheet } from "@/components/family/ChangePinSheet";
 import { cn } from "@/lib/cn";
+import { useFamily } from "@/lib/family";
 
 const NAV: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/family", label: "Home", icon: Home },
@@ -21,6 +23,8 @@ function isActive(pathname: string, href: string) {
 export function FamilyShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const queryClient = useQueryClient();
+  const { data: family } = useFamily();
+  const [changingPin, setChangingPin] = useState(false);
 
   async function signOut() {
     await fetch("/api/family-auth/logout", { method: "POST" }).catch(() => undefined);
@@ -56,17 +60,30 @@ export function FamilyShell({ children }: { children: ReactNode }) {
               ))}
             </nav>
           </div>
-          <button
-            type="button"
-            onClick={signOut}
-            className="inline-flex h-11 items-center gap-2 rounded-xl px-3 text-[15px] font-semibold text-ink/80 hover:bg-surface"
-          >
-            <LogOut className="h-5 w-5" aria-hidden />
-            <span className="hidden sm:inline">Sign out</span>
-            <span className="sr-only sm:hidden">Sign out</span>
-          </button>
+          <div className="flex shrink-0 items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setChangingPin(true)}
+              className="inline-flex h-11 items-center gap-2 rounded-xl px-3 text-[15px] font-semibold text-ink/80 hover:bg-surface"
+            >
+              <KeyRound className="h-5 w-5" aria-hidden />
+              <span className="hidden sm:inline">Change PIN</span>
+              <span className="sr-only sm:hidden">Change PIN</span>
+            </button>
+            <button
+              type="button"
+              onClick={signOut}
+              className="inline-flex h-11 items-center gap-2 rounded-xl px-3 text-[15px] font-semibold text-ink/80 hover:bg-surface"
+            >
+              <LogOut className="h-5 w-5" aria-hidden />
+              <span className="hidden sm:inline">Sign out</span>
+              <span className="sr-only sm:hidden">Sign out</span>
+            </button>
+          </div>
         </div>
       </header>
+
+      <ChangePinSheet open={changingPin} mobile={family?.mobile} onClose={() => setChangingPin(false)} />
 
       <main id="main" className="mx-auto max-w-[1600px] px-4 pb-28 pt-5 md:px-8 xl:px-12 md:pb-14 md:pt-10">
         {children}

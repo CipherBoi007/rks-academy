@@ -29,9 +29,9 @@ public record AppProperties(
 
     /** provider: "log" (records only, the default) or "cloud" (WhatsApp Business Cloud API). */
     public record WhatsApp(String provider, Cloud cloud) {
-        /** templateName: the fee reminder; loginCodeTemplate: the authentication template for family sign-in. */
+        /** templateName: the fee reminder template. */
         public record Cloud(String apiUrl, String phoneNumberId, String accessToken, String templateName,
-                            String loginCodeTemplate, String templateLanguage) {
+                            String templateLanguage) {
         }
     }
 

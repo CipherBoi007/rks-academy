@@ -44,12 +44,6 @@ export interface FamilyMe {
   children: FamilyChild[];
 }
 
-export interface CodeRequested {
-  message: string;
-  retryAfterSeconds: number;
-  devCode: string | null;
-}
-
 export const familyKeys = {
   me: ["family", "me"] as const,
   child: (id: number) => ["family", "child", id] as const,
