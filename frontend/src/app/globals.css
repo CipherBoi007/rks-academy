@@ -5,6 +5,8 @@
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;
+    /* iOS before 16 ignores overflow-x: clip (below), so anything a little too wide let the page slide sideways. */
+    overflow-x: hidden;
   }
   body {
     @apply bg-surface font-sans text-ink antialiased;

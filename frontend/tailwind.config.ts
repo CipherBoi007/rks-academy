@@ -48,6 +48,9 @@ const config: Config = {
     plugin(({ addVariant }) => {
       addVariant("short", "@media (max-width: 767px) and (max-height: 700px)"); // e.g. 360x640: tighten up
       addVariant("tall", "@media (max-width: 767px) and (min-height: 780px)"); // e.g. 390x844: roomier
+      // iPhone and iPad Safari zoom the page into any focused field under 16px, which leaves it panning and
+      // wobbling. Fields use ios:text-base so only Apple devices get 16px; everyone else keeps the design size.
+      addVariant("ios", "@supports (-webkit-touch-callout: none)");
     }),
   ],
 };

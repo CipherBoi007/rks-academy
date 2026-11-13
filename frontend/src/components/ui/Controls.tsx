@@ -13,7 +13,7 @@ export const SearchInput = forwardRef<HTMLInputElement, ComponentProps<"input"> 
           ref={ref}
           type="search"
           aria-label={label}
-          className="h-12 w-full rounded-xl border border-line bg-white pl-11 pr-4 text-[15px] placeholder:text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+          className="h-12 w-full rounded-xl border border-line bg-white pl-11 pr-4 text-[15px] placeholder:text-muted ios:text-base focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
           {...rest}
         />
       </div>

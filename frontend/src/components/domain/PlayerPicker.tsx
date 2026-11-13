@@ -80,7 +80,7 @@ export function PlayerPicker({
           setHighlight(0);
         }}
         onKeyDown={onKeyDown}
-        className="h-12 w-full rounded-xl border border-line bg-white pl-3.5 pr-10 text-[15px] placeholder:text-ink focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 aria-[invalid=true]:border-alert"
+        className="h-12 w-full rounded-xl border border-line bg-white pl-3.5 pr-10 text-[15px] placeholder:text-ink ios:text-base focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 aria-[invalid=true]:border-alert"
       />
       <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" aria-hidden />
       {open && (

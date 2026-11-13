@@ -5,7 +5,7 @@ import { cn } from "@/lib/cn";
 export const fieldLabel = "text-xs font-semibold uppercase tracking-[0.08em] text-ink/80";
 
 const control =
-  "w-full rounded-xl border border-line bg-white text-[15px] text-ink placeholder:text-muted " +
+  "w-full rounded-xl border border-line bg-white text-[15px] ios:text-base text-ink placeholder:text-muted " +
   "focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:bg-surface aria-[invalid=true]:border-alert";
 
 /** Label + control + hint/error, wired with ids for screen readers. */
@@ -58,7 +58,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
       )}
       {prefix && (
         <span
-          className={cn("pointer-events-none absolute top-1/2 -translate-y-1/2 text-[15px] text-ink", icon ? "left-10" : "left-3.5")}
+          className={cn("pointer-events-none absolute top-1/2 -translate-y-1/2 text-[15px] text-ink ios:text-base", icon ? "left-10" : "left-3.5")}
           aria-hidden
         >
           {prefix}
