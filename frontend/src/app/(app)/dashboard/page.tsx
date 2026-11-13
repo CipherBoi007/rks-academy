@@ -22,8 +22,8 @@ export default function DashboardPage() {
 
   return (
     <>
-      <p className="mb-4 text-sm text-muted md:hidden">
-        Vanakkam, <span className="font-semibold text-ink">{me?.displayName}</span>
+      <p className="mb-4 text-base text-muted md:hidden">
+        Vanakkam, <span className="text-lg font-bold text-primary">{me?.displayName}</span>
       </p>
       <PageHeader
         eyebrow={s ? formatLongDate(s.date) : " "}

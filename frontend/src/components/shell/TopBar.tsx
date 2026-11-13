@@ -21,7 +21,7 @@ export function TopBar() {
       <Logo className="md:hidden" />
       <div className="hidden min-w-0 md:block">
         <p className="text-sm text-ink/70">Vanakkam,</p>
-        <p className="truncate text-base font-semibold">{me?.displayName ?? " "}</p>
+        <p className="truncate text-lg font-bold leading-tight text-primary">{me?.displayName ?? " "}</p>
       </div>
 
       <div className="flex items-center gap-2 md:gap-4">
