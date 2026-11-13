@@ -40,7 +40,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         Skip to content
       </a>
       <Sidebar collapsed={collapsed} onToggle={toggle} />
-      <div className={cn("md:pl-[76px]", collapsed ? "lg:pl-[76px]" : "lg:pl-64")}>
+      <div className={cn("md:pl-[76px]", !collapsed && "xl:pl-64")}>
         <TopBar />
         <main id="main" className="mx-auto max-w-content px-4 pb-28 pt-5 sm:pt-6 md:px-8 md:pb-12 md:pt-8">
           {children}

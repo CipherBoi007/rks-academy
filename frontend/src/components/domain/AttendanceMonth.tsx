@@ -14,7 +14,7 @@ import type { PlayerAttendance } from "@/lib/types";
  * A player's attendance one month at a time, as a calendar: a numbered box per day, blue for present, orange for
  * absent, grey for no session, and a yellow ring on today. Arrows go back to the month the player joined. Each
  * month is fetched on its own, so history isn't limited to a fixed window. md and up: the month's totals sit
- * beside the calendar.
+ * in a row of tiles under the calendar (beside it they get squeezed in half-width cards).
  */
 export function AttendanceMonth({
   playerId,
@@ -41,8 +41,8 @@ export function AttendanceMonth({
         Attendance
       </CardTitle>
 
-      <div className="mt-5 md:flex md:items-start md:gap-8">
-        <div className="md:w-[380px] md:shrink-0">
+      <div className="mt-5">
+        <div className="md:max-w-[440px]">
           <div className="mb-3 flex items-center justify-between gap-2">
             <MonthButton direction="prev" disabled={month <= first} onClick={() => setMonth(shiftMonth(month, -1))} />
             <p className="text-center font-display text-lg font-semibold uppercase tracking-wide" aria-live="polite">
@@ -88,9 +88,9 @@ export function AttendanceMonth({
           )}
         </div>
 
-        <div className="mt-4 md:mt-12 md:flex-1">
+        <div className="mt-4 md:mt-5">
           {/* md and up: the month's numbers as tiles. */}
-          <dl className="hidden grid-cols-2 gap-3 md:grid">
+          <dl className="hidden grid-cols-4 gap-3 md:grid">
             <Stat label="Present" value={data?.present} tone="text-primary" />
             <Stat label="Absent" value={data?.absent} tone="text-alert" />
             <Stat label="Sessions" value={data && sessions} />

@@ -57,7 +57,10 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         </span>
       )}
       {prefix && (
-        <span className="pointer-events-none absolute left-10 top-1/2 -translate-y-1/2 text-[15px] text-ink" aria-hidden>
+        <span
+          className={cn("pointer-events-none absolute top-1/2 -translate-y-1/2 text-[15px] text-ink", icon ? "left-10" : "left-3.5")}
+          aria-hidden
+        >
           {prefix}
         </span>
       )}
@@ -66,7 +69,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         id={id}
         aria-invalid={invalid || undefined}
         aria-describedby={invalid ? `${id}-error` : undefined}
-        className={cn(control, "h-12 px-3.5", icon && "pl-10", prefix && "pl-[4.25rem]", className)}
+        className={cn(control, "h-12 px-3.5", icon && "pl-10", prefix && (icon ? "pl-[4.25rem]" : "pl-12"), className)}
         {...rest}
       />
     </div>

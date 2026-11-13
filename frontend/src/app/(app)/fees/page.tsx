@@ -190,7 +190,7 @@ function PaymentsView({ query, emptyMessage }: { query: ReturnType<typeof usePay
     <>
       <div ref={listTop} className="scroll-mt-24">
         <PaymentsTable rows={pager.slice(rows)} />
-        <ul className="space-y-3 md:hidden">
+        <ul className="space-y-3 md:grid md:grid-cols-2 md:gap-3 md:space-y-0 lg:hidden">
           {pager.slice(rows).map((p) => (
             <PaymentCard key={p.id} payment={p} />
           ))}
@@ -248,8 +248,9 @@ function ReceiptLink({ payment }: { payment: Payment }) {
 
 function PaymentsTable({ rows }: { rows: Payment[] }) {
   return (
-    <Card className="hidden overflow-hidden md:block">
-      <table className="w-full text-left text-[15px]">
+    // Narrow screens scroll the table sideways rather than cutting off the Receipt / Void column.
+    <Card className="hidden overflow-x-auto lg:block">
+      <table className="w-full min-w-[720px] text-left text-[15px]">
         <thead className="bg-surface text-ink/80">
           <tr>
             <th scope="col" className="px-4 py-3 font-medium">Player</th>
