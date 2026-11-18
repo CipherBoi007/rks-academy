@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { use, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Pencil, Phone, ReceiptIndianRupee, SlidersHorizontal } from "lucide-react";
+import { ArrowLeft, MessageCircle, Pencil, Phone, ReceiptIndianRupee, SlidersHorizontal } from "lucide-react";
 import { ParentLoginCard } from "@/components/domain/ParentLoginCard";
 import { AttendanceCard, FeeTimeline, ProfileHeader, ProfileInfoCards, SkillsCard } from "@/components/domain/profile";
 import { PlayerSheet } from "@/components/domain/sheets/PlayerSheet";
@@ -13,6 +13,7 @@ import { Button, buttonClass } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { ErrorState, LoadingRegion, Skeleton } from "@/components/ui/States";
 import { api } from "@/lib/api";
+import { formatPeriod, inr } from "@/lib/format";
 import { useCanSeeFees, useConfig, usePlayer, usePlayerAttendance, usePlayerPayments, usePlayerProgress } from "@/lib/queries";
 import type { PlayerDetail, Quote } from "@/lib/types";
 
@@ -54,6 +55,7 @@ export default function PlayerProfilePage({ params }: { params: Promise<{ id: st
                 <a href={`tel:+91${player.data.parent.mobile}`} className={buttonClass({ variant: "secondary" })}>
                   <Phone className="h-5 w-5" aria-hidden /> Call parent
                 </a>
+                <WhatsAppParent player={player.data} withFee={canSeeFees} />
                 {canSeeFees && (
                   <>
                     <Button variant="secondary" icon={<Pencil className="h-5 w-5" aria-hidden />} onClick={() => setEditing(true)}>
@@ -104,14 +106,44 @@ export default function PlayerProfilePage({ params }: { params: Promise<{ id: st
   );
 }
 
+/** The live quote for a current due (owner only); shared by the fee history and the WhatsApp message. */
+function useDueQuote(player: PlayerDetail, enabled: boolean) {
+  return useQuery({
+    queryKey: ["quote", player.id, "profile"],
+    queryFn: () => api<Quote>("/payments/quote", { method: "POST", body: { playerId: player.id } }),
+    enabled: enabled && player.feeStatus === "DUE" && player.active,
+  });
+}
+
+/**
+ * Opens the user's own WhatsApp with a message to this player's parent already typed. It goes from their phone,
+ * not the academy's paid API number, so it costs nothing. For the owner, a due fee is included; coaches never see
+ * fee amounts, so theirs is a plain greeting.
+ */
+function WhatsAppParent({ player, withFee }: { player: PlayerDetail; withFee: boolean }) {
+  const due = useDueQuote(player, withFee);
+  const quote = player.feeStatus === "DUE" ? due.data : undefined;
+  const text = quote
+    ? `Vanakkam ${player.parent.name}! Fee reminder from RKS Academy for ${player.name} (${player.code}): ` +
+      `${quote.plan.name} fee for ${formatPeriod(quote.periodFrom, quote.periodTo)} is ${inr(quote.total)}. ` +
+      `Please pay at the earliest. Thank you!`
+    : `Vanakkam ${player.parent.name}! This is RKS Academy about ${player.name} (${player.code}).`;
+  return (
+    <a
+      href={`https://wa.me/91${player.parent.mobile}?text=${encodeURIComponent(text)}`}
+      target="_blank"
+      rel="noreferrer"
+      className={buttonClass({ variant: "secondary" })}
+    >
+      <MessageCircle className="h-5 w-5" aria-hidden /> WhatsApp
+    </a>
+  );
+}
+
 /** Owner only: payments plus the live quote for a current due. */
 function StaffFeeHistory({ player }: { player: PlayerDetail }) {
   const payments = usePlayerPayments(player.id, true);
-  const due = useQuery({
-    queryKey: ["quote", player.id, "profile"],
-    queryFn: () => api<Quote>("/payments/quote", { method: "POST", body: { playerId: player.id } }),
-    enabled: player.feeStatus === "DUE" && player.active,
-  });
+  const due = useDueQuote(player, true);
   // A cached quote outlives the due once it's paid, so gate on the live status.
   const current = player.feeStatus === "DUE" ? due.data : undefined;
   return <FeeTimeline payments={payments} due={current} receiptHref={receiptHref} receiptTarget="_blank" />;

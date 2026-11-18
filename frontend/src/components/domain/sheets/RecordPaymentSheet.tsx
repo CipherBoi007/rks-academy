@@ -4,9 +4,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, type FormEvent } from "react";
 import { Banknote, CircleCheck, Smartphone } from "lucide-react";
 import { PlayerPicker } from "@/components/domain/PlayerPicker";
+import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { ChoiceGroup } from "@/components/ui/Controls";
-import { Field, Input, Textarea } from "@/components/ui/Field";
+import { Field, Input, Textarea, fieldLabel } from "@/components/ui/Field";
 import { Sheet } from "@/components/ui/Sheet";
 import { Skeleton } from "@/components/ui/States";
 import { useToast } from "@/components/ui/Toast";
@@ -37,7 +38,7 @@ export function RecordPaymentSheet({
   const toast = useToast();
   const queryClient = useQueryClient();
   const { data: config } = useConfig();
-  const players = useAllPlayers(open);
+  const players = useAllPlayers(open && initialPlayer === undefined);
   const plans = usePlans();
   const today = config?.today ?? "";
 
@@ -139,15 +140,32 @@ export function RecordPaymentSheet({
       }
     >
       <form id="payment-form" noValidate onSubmit={submit} className="space-y-5">
-        <Field id="pay-player" label="Player" error={submitted && playerId === null ? "Pick a player" : undefined}>
-          <PlayerPicker
-            id="pay-player"
-            players={players.data ?? []}
-            value={playerId}
-            onChange={setPlayerId}
-            invalid={submitted && playerId === null}
-          />
-        </Field>
+        {initialPlayer !== undefined ? (
+          // Opened for one player (their profile, or a due row): show who, rather than a picker to change it.
+          <div className="space-y-1.5">
+            <p className={fieldLabel}>Player</p>
+            {quote.data ? (
+              <div className="flex items-center gap-3 rounded-xl border border-line bg-surface px-3.5 py-2.5">
+                <Avatar name={quote.data.player.name} initials={quote.data.player.initials} photoUrl={quote.data.player.photoUrl} size="sm" />
+                <p className="min-w-0 truncate font-semibold">
+                  {quote.data.player.name} <span className="font-normal text-muted">· {quote.data.player.code}</span>
+                </p>
+              </div>
+            ) : (
+              !quote.isError && <Skeleton className="h-[54px] rounded-xl" />
+            )}
+          </div>
+        ) : (
+          <Field id="pay-player" label="Player" error={submitted && playerId === null ? "Pick a player" : undefined}>
+            <PlayerPicker
+              id="pay-player"
+              players={players.data ?? []}
+              value={playerId}
+              onChange={setPlayerId}
+              invalid={submitted && playerId === null}
+            />
+          </Field>
+        )}
 
         {playerId !== null &&
           (quote.isError ? (

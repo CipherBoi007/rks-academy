@@ -69,10 +69,14 @@ export function PlayerPicker({
         autoComplete="off"
         placeholder={label || "Search by name or ID"}
         value={open ? text : label}
+        // With a player already chosen, focusing (e.g. when the sheet opens) keeps showing them; a tap or typing
+        // opens the list.
         onFocus={() => {
+          if (selected) return;
           setOpen(true);
           setHighlight(0);
         }}
+        onClick={() => setOpen(true)}
         onBlur={() => setTimeout(() => setOpen(false), 120)}
         onChange={(e) => {
           setText(e.target.value);
