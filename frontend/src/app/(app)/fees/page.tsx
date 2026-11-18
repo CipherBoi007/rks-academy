@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, createContext, useContext, useRef, useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Ban, Download, FileText, Plus, Send } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Ban, ChevronDown, Download, FileText, Plus, Send } from "lucide-react";
 import { OwnerOnly } from "@/components/domain/OwnerOnly";
 import { DueRow } from "@/components/domain/PlayerRows";
 import { RecordPaymentSheet, receiptHref } from "@/components/domain/sheets/RecordPaymentSheet";
@@ -25,7 +25,7 @@ import { api, errorMessage } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { addDays, formatDate, formatMonth, inr } from "@/lib/format";
 import { keys, useConfig, useDues, usePayments, usePaymentsSummary, useReminderStatus, type PaymentFilters } from "@/lib/queries";
-import type { Payment, PaymentMode, ReminderRun } from "@/lib/types";
+import type { FeeReminder, Page, Payment, PaymentMode, ReminderRun } from "@/lib/types";
 
 type Tab = "collections" | "pending" | "history";
 const TABS: Tab[] = ["collections", "pending", "history"];
@@ -367,6 +367,7 @@ function RemindersPanel() {
   const toast = useToast();
   const queryClient = useQueryClient();
   const status = useReminderStatus(true);
+  const [showing, setShowing] = useState(false);
   const send = useMutation({
     mutationFn: () => api<ReminderRun>("/notifications/fee-reminders", { method: "POST" }),
     onSuccess: (run) => {
@@ -383,19 +384,77 @@ function RemindersPanel() {
     onError: (e) => toast({ tone: "error", title: "Couldn't send reminders", description: errorMessage(e) }),
   });
 
+  const total = (status.data?.sent ?? 0) + (status.data?.failed ?? 0);
   return (
-    <Card className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <p className="font-semibold">WhatsApp fee reminders</p>
-        <p className="text-sm text-muted">
-          Sent automatically on the 1st of each month to parents with an unpaid new period.
-          {status.data && ` This month: ${status.data.sent} sent${status.data.failed ? `, ${status.data.failed} failed` : ""}.`}
-        </p>
+    <Card className="p-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="font-semibold">WhatsApp fee reminders</p>
+          <p className="text-sm text-muted">
+            Sent automatically on the 1st of each month to parents with an unpaid new period.
+            {status.data && ` This month: ${status.data.sent} sent${status.data.failed ? `, ${status.data.failed} failed` : ""}.`}
+          </p>
+        </div>
+        <div className="flex shrink-0 flex-wrap gap-2">
+          {total > 0 && (
+            <Button
+              variant="ghost"
+              aria-expanded={showing}
+              trailingIcon={<ChevronDown className={cn("h-4 w-4 transition-transform", showing && "rotate-180")} aria-hidden />}
+              onClick={() => setShowing((s) => !s)}
+            >
+              Details
+            </Button>
+          )}
+          <Button variant="secondary" icon={<Send className="h-4 w-4" aria-hidden />} loading={send.isPending} onClick={() => send.mutate()}>
+            Send now
+          </Button>
+        </div>
       </div>
-      <Button variant="secondary" icon={<Send className="h-4 w-4" aria-hidden />} loading={send.isPending} onClick={() => send.mutate()}>
-        Send now
-      </Button>
+      {showing && <ReminderList />}
     </Card>
+  );
+}
+
+/** Each parent reminded this month: delivered to Meta, recorded only (WhatsApp wasn't live yet), or Meta's error. */
+function ReminderList() {
+  const list = useQuery({
+    queryKey: [...keys.reminders, "list"],
+    queryFn: () => api<Page<FeeReminder>>("/notifications/fee-reminders", { query: { size: 100 } }),
+  });
+  if (list.isError) return <ErrorState error={list.error} onRetry={() => list.refetch()} />;
+  if (!list.data) return <Skeleton className="mt-4 h-24 rounded-xl" />;
+  return (
+    <ul className="mt-4 divide-y divide-line border-t border-line">
+      {list.data.content.map((r) => {
+        const recordedOnly = r.status === "SENT" && r.provider === "log";
+        return (
+          <li key={r.id} className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1 py-3">
+            <div className="min-w-0">
+              <p className="font-semibold">
+                {r.player.name} <span className="font-normal text-muted">· {r.player.code}</span>
+              </p>
+              <p className="text-sm text-muted">
+                +91 {r.toMobile.replace(/^91/, "")} · {inr(r.amount)} for {formatMonth(r.periodFrom)}
+                {r.attempts > 1 && ` · ${r.attempts} tries`}
+              </p>
+              {r.status === "FAILED" && r.error && <p className="mt-1 text-sm font-medium text-alert-700">{r.error}</p>}
+              {recordedOnly && (
+                <p className="mt-1 text-sm text-muted">Recorded while WhatsApp wasn&apos;t connected, so it was never delivered.</p>
+              )}
+            </div>
+            <span
+              className={cn(
+                "shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold",
+                r.status === "FAILED" ? "bg-alert-50 text-alert-700" : recordedOnly ? "bg-chip text-muted" : "bg-primary-50 text-primary",
+              )}
+            >
+              {r.status === "FAILED" ? "Failed" : recordedOnly ? "Not sent" : "Sent"}
+            </span>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 

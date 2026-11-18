@@ -113,7 +113,9 @@ public class FeeReminderService {
         FeeQuote q = due.quote();
         FeeReminder record = reminders.findByPlayerIdAndPeriodFrom(p.getId(), q.period().from())
                 .orElseGet(FeeReminder::new);
-        if (record.getStatus() == FeeReminder.Status.SENT) {
+        // A reminder "sent" by the log provider was only recorded. Once WhatsApp is live it still has to go out.
+        boolean onlyRecorded = "log".equals(record.getProvider()) && !"log".equals(sender.name());
+        if (record.getStatus() == FeeReminder.Status.SENT && !onlyRecorded) {
             return Outcome.ALREADY_SENT;
         }
         int dueByDay = FeeRules.policyOn(policies.allTerms(), q.period().from()).lateFeeAfterDay();

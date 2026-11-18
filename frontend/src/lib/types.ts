@@ -439,6 +439,21 @@ export interface ReminderRun {
   alreadySent: number;
 }
 
+/** One parent's fee reminder for a period. provider "log" means it was only recorded, never sent. */
+export interface FeeReminder {
+  id: number;
+  player: PlayerRef;
+  periodFrom: string;
+  toMobile: string;
+  amount: number;
+  status: "SENT" | "FAILED";
+  provider: string;
+  /** Meta's exact error when it failed, e.g. "(#132001) Template name does not exist". */
+  error: string | null;
+  attempts: number;
+  sentAt: string | null;
+}
+
 export interface ReminderStatus {
   month: string;
   sent: number;

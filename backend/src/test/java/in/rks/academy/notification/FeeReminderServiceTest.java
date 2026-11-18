@@ -85,6 +85,24 @@ class FeeReminderServiceTest {
     }
 
     @Test
+    void remindersOnlyRecordedBeforeWhatsAppWentLiveAreSentForReal() {
+        Due nov = due(1L, "Aravind Murugan", "RKS101", "9000000101", "2026-11-01", "2026-11-30", "1500");
+        FeeReminder recorded = new FeeReminder();
+        recorded.setStatus(FeeReminder.Status.SENT);
+        recorded.setProvider("log");
+        recorded.setAttempts(1);
+        when(billing.dues()).thenReturn(List.of(nov.value));
+        when(repo.findByPlayerIdAndPeriodFrom(1L, LocalDate.parse("2026-11-01"))).thenReturn(Optional.of(recorded));
+        when(sender.send(any())).thenReturn(WhatsAppSender.Result.sent("m1"));
+
+        FeeReminderService.RunResult run = service.sendForCurrentMonth();
+
+        assertThat(run.sent()).isEqualTo(1);
+        assertThat(run.alreadySent()).isZero();
+        assertThat(recorded.getProvider()).isEqualTo("test");
+    }
+
+    @Test
     void messageReadsNaturally() {
         String text = FeeReminderService.message(List.of("K. Murugan", "Aravind Murugan", "RKS101", "Monthly",
                 "Nov 2026", "₹1,500", "10 Nov 2026"));
