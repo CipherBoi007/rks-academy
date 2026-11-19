@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { ArrowRight, KeyRound, Lock, Phone } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Field, Input } from "@/components/ui/Field";
@@ -16,9 +16,8 @@ function safeNext(next: string | null) {
 /**
  * Mobile number and PIN. The first sign-in uses the one-time PIN from the academy, and then a second step asks
  * the parent to choose their own PIN before the portal opens.
- * `intro` shows under the first step only, so the PIN step stays focused (and fits small phones).
  */
-export function FamilyLoginForm({ intro }: { intro?: ReactNode }) {
+export function FamilyLoginForm() {
   const router = useRouter();
   const params = useSearchParams();
   const [step, setStep] = useState<"signin" | "newPin">("signin");
@@ -83,44 +82,41 @@ export function FamilyLoginForm({ intro }: { intro?: ReactNode }) {
 
   if (step === "signin") {
     return (
-      <>
-        <form onSubmit={signIn} noValidate className="mt-5 space-y-4 short:mt-3 short:space-y-3 tall:mt-8 tall:space-y-5 md:mt-8 md:space-y-5">
-          <Field id="family-mobile" label="Mobile number">
-            <Input
-              id="family-mobile"
-              type="tel"
-              inputMode="numeric"
-              autoComplete="username"
-              placeholder="00000 00000"
-              prefix="+91"
-              icon={<Phone className="h-5 w-5" />}
-              value={mobile}
-              onChange={(e) => setMobile(mobileDigits(e.target.value))}
-              invalid={Boolean(error)}
-            />
-          </Field>
-          <Field id="family-pin" label="PIN">
-            <Input
-              id="family-pin"
-              type="password"
-              inputMode="numeric"
-              autoComplete="current-password"
-              maxLength={12}
-              placeholder="••••••"
-              icon={<Lock className="h-5 w-5" />}
-              value={pin}
-              onChange={(e) => setPin(digitsOnly(e.target.value, 12))}
-              invalid={Boolean(error)}
-            />
-          </Field>
-          {errorBox}
-          <Button type="submit" size="lg" className="w-full" loading={busy} trailingIcon={<ArrowRight className="h-5 w-5" />}>
-            Sign in
-          </Button>
-          <p className="text-center text-sm text-muted">New here or forgot your PIN? Ask the academy for a one-time PIN.</p>
-        </form>
-        {intro}
-      </>
+      <form onSubmit={signIn} noValidate className="mt-5 space-y-4 short:mt-3 short:space-y-3 tall:mt-8 tall:space-y-5 md:mt-8 md:space-y-5">
+        <Field id="family-mobile" label="Mobile number">
+          <Input
+            id="family-mobile"
+            type="tel"
+            inputMode="numeric"
+            autoComplete="username"
+            placeholder="00000 00000"
+            prefix="+91"
+            icon={<Phone className="h-5 w-5" />}
+            value={mobile}
+            onChange={(e) => setMobile(mobileDigits(e.target.value))}
+            invalid={Boolean(error)}
+          />
+        </Field>
+        <Field id="family-pin" label="PIN">
+          <Input
+            id="family-pin"
+            type="password"
+            inputMode="numeric"
+            autoComplete="current-password"
+            maxLength={12}
+            placeholder="••••••"
+            icon={<Lock className="h-5 w-5" />}
+            value={pin}
+            onChange={(e) => setPin(digitsOnly(e.target.value, 12))}
+            invalid={Boolean(error)}
+          />
+        </Field>
+        {errorBox}
+        <Button type="submit" size="lg" className="w-full" loading={busy} trailingIcon={<ArrowRight className="h-5 w-5" />}>
+          Sign in
+        </Button>
+        <p className="text-center text-sm text-muted">No PIN yet, or forgot it? Ask the academy.</p>
+      </form>
     );
   }
 

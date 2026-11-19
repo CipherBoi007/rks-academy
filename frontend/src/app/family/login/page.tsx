@@ -25,6 +25,7 @@ export default function FamilyLoginPage() {
       tagline="Attendance, skill progress, fees and receipts for your child, from the academy."
       title="Parent sign in"
       subtitle="Use the mobile number you gave the academy."
+      aside={<Highlights />}
       footer={
         <>
           Academy staff?{" "}
@@ -35,27 +36,22 @@ export default function FamilyLoginPage() {
       }
     >
       <Suspense>
-        <FamilyLoginForm intro={<Highlights />} />
+        <FamilyLoginForm />
       </Suspense>
     </SignInLayout>
   );
 }
 
-/** What parents get, so the first screen explains itself. */
+/** What parents get, as chips on the photo (md and up), so the sign-in side fits one screen. */
 function Highlights() {
   return (
-    <div className="mt-6 short:mt-4 tall:mt-8 md:mt-8">
-      <p className="text-center text-[11px] font-bold uppercase tracking-eyebrow text-muted">What you&apos;ll see</p>
-      <ul className="mt-3 grid grid-cols-3 gap-2 short:mt-2">
-        {HIGHLIGHTS.map(({ icon: Icon, label }) => (
-          <li key={label} className="flex flex-col items-center gap-2 rounded-xl bg-surface px-2 py-3 text-center short:py-2.5 tall:py-4">
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-50 text-primary">
-              <Icon className="h-5 w-5" aria-hidden />
-            </span>
-            <span className="text-xs font-semibold leading-tight text-ink">{label}</span>
-          </li>
-        ))}
-      </ul>
-    </div>
+    <ul className="flex flex-wrap gap-2" aria-label="What you'll see">
+      {HIGHLIGHTS.map(({ icon: Icon, label }) => (
+        <li key={label} className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3.5 py-2 text-sm font-semibold text-white backdrop-blur">
+          <Icon className="h-4 w-4 text-accent" aria-hidden />
+          {label}
+        </li>
+      ))}
+    </ul>
   );
 }

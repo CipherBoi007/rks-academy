@@ -12,6 +12,7 @@ export function SignInLayout({
   title,
   subtitle,
   footer,
+  aside,
   children,
 }: {
   eyebrow: string;
@@ -20,6 +21,8 @@ export function SignInLayout({
   title: string;
   subtitle: string;
   footer: ReactNode;
+  /** Extra content under the tagline on the photo, md and up only (phones keep one screen). */
+  aside?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -44,6 +47,7 @@ export function SignInLayout({
             {headline}
           </h1>
           <p className="mt-4 hidden max-w-md text-lg text-white/80 md:block">{tagline}</p>
+          {aside && <div className="mt-6 hidden md:block">{aside}</div>}
         </div>
       </section>
 
