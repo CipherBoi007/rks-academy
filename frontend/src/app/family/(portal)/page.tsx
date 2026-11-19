@@ -227,8 +227,11 @@ function FeeBox({ child }: { child: FamilyChild }) {
           <strong className="font-display text-xl">{inr(child.due.amount)}</strong> due for{" "}
           {formatPeriod(child.due.periodFrom, child.due.periodTo)}
         </p>
-        <p className="text-sm">Pay at the academy desk (UPI or cash) by {formatDate(child.due.payBy)} to avoid a late fee.</p>
+        <p className="text-sm">Pay by {formatDate(child.due.payBy)} to avoid a late fee.</p>
       </div>
+      <Link href="/family/fees" className={cn(buttonClass({ variant: "secondary" }), "shrink-0 self-center px-3")}>
+        Pay now
+      </Link>
     </div>
   );
 }

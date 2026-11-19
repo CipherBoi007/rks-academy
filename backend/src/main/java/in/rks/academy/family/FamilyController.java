@@ -7,6 +7,9 @@ import in.rks.academy.common.ApiException;
 import in.rks.academy.common.PageResponse;
 import in.rks.academy.family.FamilyAuthService.FamilySession;
 import in.rks.academy.family.FamilyService.Family;
+import in.rks.academy.family.PaymentReportService.Fees;
+import in.rks.academy.family.PaymentReportService.ReportDto;
+import in.rks.academy.family.PaymentReportService.ReportRequest;
 import in.rks.academy.player.PlayerDtos.PlayerAttendance;
 import in.rks.academy.player.PlayerDtos.PlayerDetail;
 import in.rks.academy.player.PlayerDtos.ProgressDto;
@@ -56,11 +59,14 @@ public class FamilyController {
 
     private final FamilyAuthService auth;
     private final FamilyService family;
+    private final PaymentReportService fees;
     private final ProductService products;
 
-    public FamilyController(FamilyAuthService auth, FamilyService family, ProductService products) {
+    public FamilyController(FamilyAuthService auth, FamilyService family, PaymentReportService fees,
+                            ProductService products) {
         this.auth = auth;
         this.family = family;
+        this.fees = fees;
         this.products = products;
     }
 
@@ -122,6 +128,20 @@ public class FamilyController {
     public ResponseEntity<QuoteDto> due(@PathVariable long id) {
         QuoteDto due = family.due(id);
         return due == null ? ResponseEntity.noContent().build() : ResponseEntity.ok(due);
+    }
+
+    @Operation(summary = "The Fees page: what is due for every child, where to pay by UPI, payment reports and receipts")
+    @GetMapping("/fees")
+    public Fees fees() {
+        return fees.fees();
+    }
+
+    @Operation(summary = "Report a UPI payment with its reference number. It covers the fees due now for every "
+            + "child not already in a waiting report; the academy confirms it.")
+    @PostMapping("/payment-reports")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ReportDto report(@Valid @RequestBody ReportRequest req) {
+        return fees.report(req);
     }
 
     @GetMapping("/receipts/{yy}/{number}")

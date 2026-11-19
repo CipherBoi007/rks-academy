@@ -556,6 +556,93 @@ class ApiIT {
         assertThat(call(token, HttpMethod.GET, "/family/me", null).getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
+    @Test
+    @Order(24)
+    void parentsReportUpiPaymentsAndTheOwnerConfirmsOrRejectsThem() throws Exception {
+        // Two families with fees due, each with a single child, so their reports can't touch each other.
+        List<long[]> due = new java.util.ArrayList<>();
+        java.util.Set<String> seen = new java.util.HashSet<>();
+        for (JsonNode d : get(owner, "/dues?size=100").get("content")) {
+            long id = d.get("player").get("id").asLong();
+            String mobile = get(owner, "/players/" + id).get("parent").get("mobile").asText();
+            if (seen.add(mobile) && get(owner, "/players/" + id).get("siblings").isEmpty()) {
+                due.add(new long[] {id, Long.parseLong(mobile)});
+            }
+        }
+        assertThat(due).hasSizeGreaterThanOrEqualTo(2);
+        long playerId = due.get(0)[0];
+        String token = familyLogin(String.valueOf(due.get(0)[1]));
+
+        JsonNode fees = get(token, "/family/fees");
+        assertThat(fees.get("totalDue").decimalValue()).isPositive();
+        assertThat(fees.get("toReport").decimalValue()).isEqualByComparingTo(fees.get("totalDue").decimalValue());
+        assertThat(fees.get("children").get(0).get("due").get("total").decimalValue()).isPositive();
+        String amount = fees.get("toReport").decimalValue().toPlainString();
+
+        // Bad references and dates are refused with a clear message.
+        assertThat(call(token, HttpMethod.POST, "/family/payment-reports",
+                Map.of("utr", "12345", "amount", amount, "paidOn", "2026-11-05")).getStatusCode())
+                .isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+        assertThat(call(token, HttpMethod.POST, "/family/payment-reports",
+                Map.of("utr", "431234567890", "amount", amount, "paidOn", "2026-11-06")).getStatusCode())
+                .isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+
+        ResponseEntity<String> sent = call(token, HttpMethod.POST, "/family/payment-reports",
+                Map.of("utr", "4312 3456-7890", "amount", amount, "paidOn", "2026-11-05"));
+        assertThat(sent.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        JsonNode report = json.readTree(sent.getBody());
+        assertThat(report.get("utr").asText()).as("parents only see the last 4").isEqualTo("7890");
+        assertThat(report.get("status").asText()).isEqualTo("PENDING");
+        assertThat(get(token, "/family/fees").get("toReport").decimalValue()).isZero();
+        assertThat(call(token, HttpMethod.POST, "/family/payment-reports",
+                Map.of("utr", "431234567891", "amount", amount, "paidOn", "2026-11-05")).getStatusCode())
+                .as("nothing left to report").isEqualTo(HttpStatus.CONFLICT);
+
+        // The owner sees the full reference; coaches see nothing.
+        assertThat(call(coach, HttpMethod.GET, "/payment-reports", null).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        long id = report.get("id").asLong();
+        JsonNode listed = get(owner, "/payment-reports").get(0);
+        assertThat(listed.get("utr").asText()).isEqualTo("431234567890");
+        assertThat(listed.get("status").asText()).isEqualTo("PENDING");
+
+        // Rejected: the parent sees why and can report the same reference again.
+        assertThat(call(owner, HttpMethod.POST, "/payment-reports/" + id + "/reject",
+                Map.of("reason", "Not in the bank statement")).getStatusCode()).isEqualTo(HttpStatus.OK);
+        JsonNode afterReject = get(token, "/family/fees");
+        assertThat(afterReject.get("reports").get(0).get("rejectReason").asText()).isEqualTo("Not in the bank statement");
+        assertThat(afterReject.get("toReport").decimalValue()).isPositive();
+        long again = json.readTree(call(token, HttpMethod.POST, "/family/payment-reports",
+                Map.of("utr", "431234567890", "amount", amount, "paidOn", "2026-11-05")).getBody()).get("id").asLong();
+
+        // Confirmed: a UPI receipt is recorded and the fee is paid. Deciding twice is refused.
+        JsonNode confirmed = json.readTree(call(owner, HttpMethod.POST, "/payment-reports/" + again + "/confirm",
+                null).getBody());
+        assertThat(confirmed.get("status").asText()).isEqualTo("CONFIRMED");
+        String receiptNo = confirmed.get("items").get(0).get("receiptNo").asText();
+        assertThat(receiptNo).startsWith("RKS/26/");
+        assertThat(get(owner, "/players/" + playerId).get("feeStatus").asText()).isEqualTo("PAID");
+        JsonNode paid = get(token, "/family/fees");
+        assertThat(paid.get("totalDue").decimalValue()).isZero();
+        assertThat(paid.get("payments").get(0).get("receiptNo").asText()).isEqualTo(receiptNo);
+        assertThat(paid.get("payments").get(0).get("mode").asText()).isEqualTo("UPI");
+        assertThat(call(owner, HttpMethod.POST, "/payment-reports/" + again + "/confirm", null).getStatusCode())
+                .isEqualTo(HttpStatus.CONFLICT);
+        assertThat(call(token, HttpMethod.POST, "/family/payment-reports", Map.of("utr", "431234567890", "amount", amount, "paidOn", "2026-11-05"))
+                .getStatusCode()).as("a confirmed reference can't be used again").isEqualTo(HttpStatus.CONFLICT);
+
+        // Fees collected at the desk meanwhile: confirming would record them twice, so it's refused.
+        long other = due.get(1)[0];
+        String otherToken = familyLogin(String.valueOf(due.get(1)[1]));
+        String otherAmount = get(otherToken, "/family/fees").get("toReport").decimalValue().toPlainString();
+        long pending = json.readTree(call(otherToken, HttpMethod.POST, "/family/payment-reports",
+                Map.of("utr", "555566667777", "amount", otherAmount, "paidOn", "2026-11-05")).getBody()).get("id").asLong();
+        assertThat(call(owner, HttpMethod.POST, "/payments", Map.of("playerId", other, "mode", "CASH"))
+                .getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        ResponseEntity<String> refused = call(owner, HttpMethod.POST, "/payment-reports/" + pending + "/confirm", null);
+        assertThat(refused.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(json.readTree(refused.getBody()).get("code").asText()).isEqualTo("ALREADY_COLLECTED");
+    }
+
     /** Demo parents all have PIN 123456 (db/demo/V7_1). */
     String familyLogin(String mobile) throws Exception {
         return json.readTree(call(null, HttpMethod.POST, "/family/auth/login",

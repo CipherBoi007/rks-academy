@@ -38,6 +38,8 @@ public record AppProperties(
     public record Reminders(boolean enabled, String cron) {
     }
 
-    public record Academy(String name, String shortName, String address, String phone) {
+    /** upiId: where parents pay fees from the family app; empty shows "pay at the academy" instead. */
+    public record Academy(String name, String shortName, String address, String phone, String upiId,
+                          String upiPayee) {
     }
 }

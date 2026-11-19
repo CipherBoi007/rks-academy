@@ -6,6 +6,7 @@ import { Suspense, createContext, useContext, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ban, ChevronDown, Download, FileText, Plus, Send } from "lucide-react";
 import { OwnerOnly } from "@/components/domain/OwnerOnly";
+import { PaymentReportsPanel } from "@/components/domain/PaymentReports";
 import { DueRow } from "@/components/domain/PlayerRows";
 import { RecordPaymentSheet, receiptHref } from "@/components/domain/sheets/RecordPaymentSheet";
 import { VoidPaymentSheet } from "@/components/domain/sheets/VoidPaymentSheet";
@@ -94,6 +95,10 @@ function Fees() {
           </div>
         </div>
       )}
+
+      <div className="mt-4 empty:hidden">
+        <PaymentReportsPanel />
+      </div>
 
       <div className="scrollbar-none relative -mx-4 mt-5 overflow-x-auto px-4 sm:mx-0 sm:px-0">
         <SegmentedTabs<Tab>

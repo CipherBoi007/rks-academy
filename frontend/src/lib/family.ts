@@ -8,8 +8,10 @@ import type {
   Level,
   Page,
   Payment,
+  PaymentReport,
   PlayerAttendance,
   PlayerDetail,
+  PlayerRef,
   Product,
   ProductCategory,
   Progress,
@@ -44,8 +46,20 @@ export interface FamilyMe {
   children: FamilyChild[];
 }
 
+/** The Fees page, for every child at once. upiId is null when the academy takes fees only at the desk. */
+export interface FamilyFees {
+  totalDue: number;
+  /** The part of totalDue not yet covered by a waiting payment report. */
+  toReport: number;
+  children: { player: PlayerRef; due: Quote | null; payBy: string | null; reported: boolean }[];
+  payTo: { upiId: string | null; payee: string; phone: string };
+  reports: PaymentReport[];
+  payments: Payment[];
+}
+
 export const familyKeys = {
   me: ["family", "me"] as const,
+  fees: ["family", "fees"] as const,
   child: (id: number) => ["family", "child", id] as const,
   attendance: (id: number, month: string) => ["family", "child", id, "attendance", month] as const,
   progress: (id: number) => ["family", "child", id, "progress"] as const,
@@ -59,6 +73,9 @@ export const familyKeys = {
 };
 
 export const useFamily = () => useQuery({ queryKey: familyKeys.me, queryFn: () => api<FamilyMe>("/family/me") });
+
+export const useFamilyFees = () =>
+  useQuery({ queryKey: familyKeys.fees, queryFn: () => api<FamilyFees>("/family/fees") });
 
 export const useFamilyChild = (id: number) =>
   useQuery({ queryKey: familyKeys.child(id), queryFn: () => api<PlayerDetail>(`/family/children/${id}`) });

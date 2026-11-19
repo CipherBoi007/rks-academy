@@ -464,6 +464,7 @@ The schema is created and evolved **only** by Flyway scripts, which run automati
 | `V4__admin_and_voids.sql` | Staff-login columns (token version, forced PIN change) and payment voids |
 | `V5__family_portal.sql` | `parent_account`, `login_code` |
 | `V7__family_pins.sql` | parent PINs (`pin_hash`, `must_change_pin`); drops `login_code` |
+| `V8__payment_reports.sql` | `payment_report`, `payment_report_item`: UPI payments parents report, confirmed or rejected by the owner |
 | `V6__stored_files_and_rls.sql` | `stored_file` (uploaded images), and **row-level security switched on** for every table |
 | `db/demo/V2_1 … V2_5` | **Dev only:** demo staff logins, players, payments, attendance, products |
 | `db/demo/V6_1` | **Dev only:** moves the demo logins' PIN from `1234` to `123456` (PINs became 6–12 digits) |
@@ -697,6 +698,7 @@ The backend reads **environment variables** (Spring doesn't read `.env` files by
 | `APP_PROXY_KEY` | *(empty = off)* | **Set it whenever the API has a public URL** (Render). Every `/api` call must carry it in `X-RKS-Proxy-Key`. |
 | `APP_WHATSAPP_NUMBER` | `910000000000` | **Placeholder.** The academy's WhatsApp number for "Enquire on WhatsApp": country code + number, digits only |
 | `APP_ACADEMY_PHONE` | `+91 00000 00000` | Printed on receipts |
+| `APP_UPI_ID` / `APP_UPI_PAYEE` | empty / `RKS Academy` | Where parents pay from the family app's Fees page (UPI link and QR). Empty shows "pay at the academy desk" |
 | `APP_WHATSAPP_PROVIDER` | `log` | `log` or `cloud` |
 | `APP_WHATSAPP_PHONE_NUMBER_ID` / `APP_WHATSAPP_ACCESS_TOKEN` | *(empty)* | Required for `cloud`; the API refuses to start without them |
 | `APP_WHATSAPP_TEMPLATE` / `APP_WHATSAPP_TEMPLATE_LANG` | `fee_reminder` / `en` | Template name and language |

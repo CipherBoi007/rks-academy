@@ -96,6 +96,7 @@ Also set these in *Environment* when you have them. Each change redeploys.
 
 - `APP_WHATSAPP_NUMBER`: the academy's real WhatsApp number, digits with country code, e.g. `9198xxxxxxxx`.
 - `APP_ACADEMY_PHONE`: printed on receipts.
+- `APP_UPI_ID` and `APP_UPI_PAYEE`: the academy's UPI ID (a business/merchant one) and the name parents' UPI apps show, for **Pay** in the family app.
 
 > `APP_REMINDERS_ENABLED` starts as `false`. Leave it off until WhatsApp is live (section 8). In "log" mode a month's reminders are recorded as sent and won't go out again later.
 

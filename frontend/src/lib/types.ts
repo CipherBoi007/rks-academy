@@ -316,6 +316,26 @@ export interface Payment {
   voidReason: string | null;
 }
 
+/** A parent's UPI payment from the family app, waiting for (or decided by) the owner. */
+export type PaymentReportStatus = "PENDING" | "CONFIRMED" | "REJECTED";
+
+export interface PaymentReport {
+  id: number;
+  /** The full UPI reference for the owner; only its last 4 characters for parents. */
+  utr: string;
+  amount: number;
+  paidOn: string;
+  status: PaymentReportStatus;
+  reportedAt: string;
+  reviewedBy: string | null;
+  reviewedAt: string | null;
+  rejectReason: string | null;
+  parentName: string | null;
+  parentMobile: string | null;
+  feesTotal: number;
+  items: { player: PlayerRef; periodFrom: string; amount: number; receiptNo: string | null }[];
+}
+
 export interface Quote {
   player: PlayerRef;
   plan: PlanRef;

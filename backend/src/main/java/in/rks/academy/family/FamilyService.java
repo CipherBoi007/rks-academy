@@ -113,6 +113,11 @@ public class FamilyService {
         return receipt;
     }
 
+    /** The last day to pay a period's fee without a late fee. */
+    LocalDate payBy(LocalDate periodFrom) {
+        return periodFrom.withDayOfMonth(FeeRules.policyOn(policies.allTerms(), periodFrom).lateFeeAfterDay());
+    }
+
     private Player own(long id) {
         String mobile = current().mobile();
         return players.findDetailed(id)
@@ -125,8 +130,7 @@ public class FamilyService {
         DueInfo due = null;
         if (isDue) {
             QuoteDto q = payments.quote(p.getId(), null);
-            int dueDay = FeeRules.policyOn(policies.allTerms(), q.periodFrom()).lateFeeAfterDay();
-            due = new DueInfo(q.total(), q.periodFrom(), q.periodTo(), q.periodFrom().withDayOfMonth(dueDay));
+            due = new DueInfo(q.total(), q.periodFrom(), q.periodTo(), payBy(q.periodFrom()));
         }
         var b = p.getBatch();
         return new ChildCard(p.getId(), p.getCode(), p.getName(), Names.initials(p.getName()), p.getPhotoUrl(),

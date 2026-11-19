@@ -5,13 +5,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
-import { Home, KeyRound, LogOut, ShoppingBag, type LucideIcon } from "lucide-react";
+import { Home, KeyRound, LogOut, ShoppingBag, Wallet, type LucideIcon } from "lucide-react";
 import { ChangePinSheet } from "@/components/family/ChangePinSheet";
 import { cn } from "@/lib/cn";
 import { useFamily } from "@/lib/family";
 
 const NAV: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/family", label: "Home", icon: Home },
+  { href: "/family/fees", label: "Fees", icon: Wallet },
   { href: "/family/shop", label: "Shop", icon: ShoppingBag },
 ];
 
@@ -19,7 +20,7 @@ function isActive(pathname: string, href: string) {
   return href === "/family" ? pathname === "/family" || pathname.startsWith("/family/child") : pathname.startsWith(href);
 }
 
-/** The parents' app frame: a light header, a phone tab bar (Home, Shop) and a comfortable reading width. */
+/** The parents' app frame: a light header, a phone tab bar (Home, Fees, Shop) and a comfortable reading width. */
 export function FamilyShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const queryClient = useQueryClient();

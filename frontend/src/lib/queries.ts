@@ -18,6 +18,7 @@ import type {
   ParentLogin,
   Payment,
   PaymentMode,
+  PaymentReport,
   PaymentsSummary,
   PlayerAttendance,
   PlayerDetail,
@@ -61,6 +62,7 @@ export const keys = {
   product: (id: number) => ["products", id] as const,
   related: (id: number) => ["products", id, "related"] as const,
   reminders: ["reminders"] as const,
+  paymentReports: ["payment-reports"] as const,
   staff: ["staff"] as const,
   adminCourts: ["courts", "admin"] as const,
   coaches: ["coaches"] as const,
@@ -243,6 +245,15 @@ export const useAdminBatches = () =>
 
 export const useWhatsAppStatus = () =>
   useQuery({ queryKey: keys.whatsapp, queryFn: () => api<WhatsAppStatus>("/notifications/whatsapp") });
+
+/** UPI payments parents reported from the family app: waiting ones first. Owner only. */
+export const usePaymentReports = (enabled = true) =>
+  useQuery({
+    queryKey: keys.paymentReports,
+    queryFn: () => api<PaymentReport[]>("/payment-reports"),
+    enabled,
+    refetchInterval: 60_000,
+  });
 
 export const useReminderStatus = (enabled: boolean) =>
   useQuery({

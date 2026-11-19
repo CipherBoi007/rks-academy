@@ -78,6 +78,9 @@ app:
     short-name: RKS Academy
     address: Ramanathapuram, Tamil Nadu
     phone: ${APP_ACADEMY_PHONE:+91 00000 00000}
+    # The academy's UPI ID (e.g. rksacademy@okaxis) for "Pay now" in the family app, and the name UPI apps show.
+    upi-id: ${APP_UPI_ID:}
+    upi-payee: ${APP_UPI_PAYEE:RKS Academy}
 
 management:
   endpoints:
