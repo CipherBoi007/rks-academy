@@ -587,12 +587,14 @@ class ApiIT {
                 Map.of("utr", "431234567890", "amount", amount, "paidOn", "2026-11-06")).getStatusCode())
                 .isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
 
+        // The family app sends no amount: the report takes the fees due on the day of payment.
         ResponseEntity<String> sent = call(token, HttpMethod.POST, "/family/payment-reports",
-                Map.of("utr", "4312 3456-7890", "amount", amount, "paidOn", "2026-11-05"));
+                Map.of("utr", "4312 3456-7890", "paidOn", "2026-11-05"));
         assertThat(sent.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         JsonNode report = json.readTree(sent.getBody());
         assertThat(report.get("utr").asText()).as("parents only see the last 4").isEqualTo("7890");
         assertThat(report.get("status").asText()).isEqualTo("PENDING");
+        assertThat(report.get("amount").decimalValue()).isEqualByComparingTo(amount);
         assertThat(get(token, "/family/fees").get("toReport").decimalValue()).isZero();
         assertThat(call(token, HttpMethod.POST, "/family/payment-reports",
                 Map.of("utr", "431234567891", "amount", amount, "paidOn", "2026-11-05")).getStatusCode())

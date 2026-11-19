@@ -48,9 +48,13 @@ public class PaymentReportService {
     private static final int SHOW_DECIDED_DAYS = 30;
     private static final DateTimeFormatter MONTH = DateTimeFormatter.ofPattern("MMM yyyy", Locale.ENGLISH);
 
+    /**
+     * {@code amount} is normally left out: the family app's UPI link fixes it, so the report takes the fees due on
+     * the day the parent paid (no late fee if they paid in time, even when they report it later).
+     */
     public record ReportRequest(
             @NotBlank @Size(max = 40) String utr,
-            @NotNull @Positive @Digits(integer = 8, fraction = 2) BigDecimal amount,
+            @Positive @Digits(integer = 8, fraction = 2) BigDecimal amount,
             @NotNull LocalDate paidOn) {
     }
 
@@ -183,7 +187,6 @@ public class PaymentReportService {
         PaymentReport report = new PaymentReport();
         report.setParent(parent);
         report.setUtr(utr);
-        report.setAmount(req.amount().setScale(2, RoundingMode.HALF_UP));
         report.setPaidOn(req.paidOn());
         for (Player p : unpaid) {
             // Quoted for the day the parent paid, so a late fee is charged only if they paid late.
@@ -194,6 +197,8 @@ public class PaymentReportService {
             item.setAmount(quote.total());
             report.addItem(item);
         }
+        BigDecimal fees = sum(report.getItems().stream().map(PaymentReportItem::getAmount).toList());
+        report.setAmount(req.amount() == null ? fees : req.amount().setScale(2, RoundingMode.HALF_UP));
         return toDto(reports.saveAndFlush(report), false);
     }
 

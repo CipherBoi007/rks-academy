@@ -2,7 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, type FormEvent } from "react";
-import { Copy, Phone, Send, Smartphone } from "lucide-react";
+import { Copy, Download, Phone, Send, Smartphone } from "lucide-react";
 import { Button, buttonClass } from "@/components/ui/Button";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { Field, Input } from "@/components/ui/Field";
@@ -12,7 +12,7 @@ import { useToast } from "@/components/ui/Toast";
 import { api, ApiError, errorMessage } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { familyKeys, type FamilyFees } from "@/lib/family";
-import { inr } from "@/lib/format";
+import { formatPeriod, inr } from "@/lib/format";
 import { colors } from "@/lib/theme";
 import type { PaymentReport } from "@/lib/types";
 
@@ -34,24 +34,19 @@ export function PaySheet({ open, fees, today, onClose }: { open: boolean; fees: 
   const link = upiId ? upiLink(upiId, payee, fees.toReport, `RKS fees ${unpaid.map((c) => c.player.code).join(" ")}`) : null;
 
   const [utr, setUtr] = useState("");
-  const [amount, setAmount] = useState("");
   const [paidOn, setPaidOn] = useState(today);
-  const [errors, setErrors] = useState<{ utr?: string; amount?: string; paidOn?: string }>({});
+  const [errors, setErrors] = useState<{ utr?: string; paidOn?: string }>({});
 
   useEffect(() => {
     if (!open) return;
     setUtr("");
-    setAmount(String(fees.toReport));
     setPaidOn(today);
     setErrors({});
-  }, [open, fees.toReport, today]);
+  }, [open, today]);
 
+  // No amount is sent: the UPI link fixes it, and the server works out the fees due on the day the parent paid.
   const report = useMutation({
-    mutationFn: () =>
-      api<PaymentReport>("/family/payment-reports", {
-        method: "POST",
-        body: { utr, amount: Number(amount), paidOn },
-      }),
+    mutationFn: () => api<PaymentReport>("/family/payment-reports", { method: "POST", body: { utr, paidOn } }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: familyKeys.fees });
       toast({ title: "Thank you! Payment reported", description: "The academy will confirm it and your receipt will appear here." });
@@ -69,14 +64,10 @@ export function PaySheet({ open, fees, today, onClose }: { open: boolean; fees: 
     e.preventDefault();
     const next: typeof errors = {};
     if (!/^[A-Za-z0-9]{10,22}$/.test(utr.replace(/[\s-]/g, ""))) next.utr = "Enter the UPI reference number (usually 12 digits)";
-    const value = Number(amount);
-    if (!amount || !Number.isFinite(value) || value <= 0) next.amount = "Enter the amount you paid";
     if (!paidOn) next.paidOn = "Pick the day you paid";
     setErrors(next);
     if (Object.keys(next).length === 0) report.mutate();
   }
-
-  const differs = amount !== "" && Number(amount) > 0 && Number(amount) !== fees.toReport;
 
   return (
     <Sheet
@@ -95,14 +86,21 @@ export function PaySheet({ open, fees, today, onClose }: { open: boolean; fees: 
       <div className="rounded-2xl bg-primary px-5 py-4 text-white">
         <p className="text-[11px] font-bold uppercase tracking-eyebrow text-white/70">Amount to pay</p>
         <p className="mt-1 font-display text-4xl font-bold">{inr(fees.toReport)}</p>
-        <ul className="mt-2 space-y-0.5 text-sm text-white/85">
-          {unpaid.map((c) => (
-            <li key={c.player.id} className="flex justify-between gap-3">
-              <span className="truncate">{c.player.name}</span>
-              <span className="shrink-0 font-semibold">{inr(c.due!.total)}</span>
-            </li>
-          ))}
-        </ul>
+        {unpaid.length === 1 ? (
+          <p className="mt-1 text-sm text-white/85">
+            {unpaid[0].player.name} · {formatPeriod(unpaid[0].due!.periodFrom, unpaid[0].due!.periodTo)}
+          </p>
+        ) : (
+          // Several children: show how the total splits.
+          <ul className="mt-2 space-y-0.5 text-sm text-white/85">
+            {unpaid.map((c) => (
+              <li key={c.player.id} className="flex justify-between gap-3">
+                <span className="truncate">{c.player.name}</span>
+                <span className="shrink-0 font-semibold">{inr(c.due!.total)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       {upiId && link ? (
@@ -151,21 +149,6 @@ export function PaySheet({ open, fees, today, onClose }: { open: boolean; fees: 
                 invalid={Boolean(errors.utr)}
               />
             </Field>
-            <Field
-              id="pay-amount"
-              label="Amount paid"
-              error={errors.amount}
-              hint={differs ? `The fees come to ${inr(fees.toReport)}. If you paid a different amount, the academy will check it.` : undefined}
-            >
-              <Input
-                id="pay-amount"
-                inputMode="decimal"
-                prefix="₹"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value.replace(/[^\d.]/g, ""))}
-                invalid={Boolean(errors.amount)}
-              />
-            </Field>
             <Field id="pay-date" label="Paid on" error={errors.paidOn}>
               <DatePicker id="pay-date" label="Paid on" value={paidOn} max={today} onChange={setPaidOn} />
             </Field>
@@ -187,7 +170,10 @@ export function PaySheet({ open, fees, today, onClose }: { open: boolean; fees: 
   );
 }
 
-/** The same UPI link as a QR code, for paying from another phone. Drawn in the browser; the library loads on demand. */
+/**
+ * The same UPI link as a QR code: scanned from another phone, or saved and opened from the gallery in a UPI app.
+ * Drawn in the browser; the library loads on demand.
+ */
 function UpiQr({ link }: { link: string }) {
   const [src, setSrc] = useState<string | null>(null);
   useEffect(() => {
@@ -202,14 +188,23 @@ function UpiQr({ link }: { link: string }) {
     };
   }, [link]);
   return (
-    <div className="mt-5 flex flex-col items-center gap-2 max-md:hidden">
+    <div className="mt-5 flex flex-col items-center gap-2">
+      <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted md:hidden">Or scan the QR</p>
       {src ? (
         // eslint-disable-next-line @next/next/no-img-element -- a generated data: URL
-        <img src={src} alt="UPI QR code for the academy" width={220} height={220} className="h-[220px] w-[220px] rounded-xl border border-line p-2" />
+        <img src={src} alt="UPI QR code for the academy" width={220} height={220} className="h-[200px] w-[200px] rounded-xl border border-line p-2 md:h-[220px] md:w-[220px]" />
       ) : (
-        <Skeleton className="h-[220px] w-[220px] rounded-xl" />
+        <Skeleton className="h-[200px] w-[200px] rounded-xl md:h-[220px] md:w-[220px]" />
       )}
-      <p className="text-center text-sm text-muted">Scan with GPay, PhonePe, Paytm or any UPI app.</p>
+      <p className="text-center text-sm text-muted">
+        Scan with GPay, PhonePe, Paytm or any UPI app.
+        <span className="md:hidden"> On this phone? Save the QR, then open it from the gallery in your UPI app&apos;s scanner.</span>
+      </p>
+      {src && (
+        <a href={src} download="RKS-Academy-UPI-QR.png" className={cn(buttonClass({ variant: "ghost" }), "px-3")}>
+          <Download className="h-4 w-4" aria-hidden /> Save QR
+        </a>
+      )}
     </div>
   );
 }
