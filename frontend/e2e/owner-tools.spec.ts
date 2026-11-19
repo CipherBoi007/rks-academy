@@ -50,7 +50,7 @@ test("courts and batches: add a court, refuse a double-booked batch", async ({ p
 
 test("void a wrong payment: it stays on record and the fee is due again", async ({ page }) => {
   await signIn(page, OWNER);
-  await page.goto("/fees?tab=history");
+  await page.goto("/fees");
   const row = page.locator("tr", { hasText: "RKS/26/1197" });
   await row.getByRole("button", { name: "Void receipt RKS/26/1197" }).click();
   const sheet = page.getByRole("dialog", { name: "Void payment" });

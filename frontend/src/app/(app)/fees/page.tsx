@@ -13,6 +13,7 @@ import { VoidPaymentSheet } from "@/components/domain/sheets/VoidPaymentSheet";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button, ButtonLink } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { Select } from "@/components/ui/Field";
 import { ModeChip } from "@/components/ui/Chip";
 import { KpiCard } from "@/components/ui/KpiCard";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -25,11 +26,20 @@ import { useToast } from "@/components/ui/Toast";
 import { api, errorMessage } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { addDays, formatDate, formatMonth, inr } from "@/lib/format";
-import { keys, useConfig, useDues, usePayments, usePaymentsSummary, useReminderStatus, type PaymentFilters } from "@/lib/queries";
+import {
+  keys,
+  useConfig,
+  useDues,
+  usePaymentReports,
+  usePayments,
+  usePaymentsSummary,
+  useReminderStatus,
+  type PaymentFilters,
+} from "@/lib/queries";
 import type { FeeReminder, Page, Payment, PaymentMode, ReminderRun } from "@/lib/types";
 
-type Tab = "collections" | "pending" | "history";
-const TABS: Tab[] = ["collections", "pending", "history"];
+type Tab = "payments" | "pending" | "requests";
+const TABS: Tab[] = ["payments", "pending", "requests"];
 
 /** Smaller header buttons on phones so Export, Fee structure and Record payment fit on one line. */
 const PHONE_COMPACT = "max-sm:gap-1.5 max-sm:px-2.5 max-sm:text-[13px]";
@@ -48,14 +58,17 @@ function Fees() {
   const router = useRouter();
   const params = useSearchParams();
   const tabParam = params.get("tab") as Tab | null;
-  const tab: Tab = tabParam && TABS.includes(tabParam) ? tabParam : "collections";
+  // Old links (?tab=collections, ?tab=history) land on Payments, which replaced both.
+  const tab: Tab = tabParam && TABS.includes(tabParam) ? tabParam : "payments";
   const [recording, setRecording] = useState<{ open: boolean; playerId?: number }>({ open: false });
   const [voiding, setVoiding] = useState<Payment | null>(null);
   const summary = usePaymentsSummary();
   const s = summary.data;
+  const requests = usePaymentReports();
+  const waiting = requests.data?.filter((r) => r.status === "PENDING").length ?? 0;
 
   function setTab(t: Tab) {
-    router.replace(t === "collections" ? "/fees" : `/fees?tab=${t}`, { scroll: false });
+    router.replace(t === "payments" ? "/fees" : `/fees?tab=${t}`, { scroll: false });
   }
 
   return (
@@ -96,19 +109,15 @@ function Fees() {
         </div>
       )}
 
-      <div className="mt-4 empty:hidden">
-        <PaymentReportsPanel />
-      </div>
-
       <div className="scrollbar-none relative -mx-4 mt-5 overflow-x-auto px-4 sm:mx-0 sm:px-0">
         <SegmentedTabs<Tab>
           label="Fee views"
           value={tab}
           onChange={setTab}
           tabs={[
-            { value: "collections", label: "Collections" },
+            { value: "payments", label: "Payments" },
             { value: "pending", label: `Pending${s ? ` (${s.dueCount})` : ""}` },
-            { value: "history", label: "History" },
+            { value: "requests", label: `Requests${waiting ? ` (${waiting})` : ""}` },
           ]}
           className="min-w-max sm:min-w-0"
         />
@@ -116,9 +125,9 @@ function Fees() {
 
       <VoidContext.Provider value={setVoiding}>
         <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`} className="mt-4">
-          {tab === "collections" && <Collections />}
+          {tab === "payments" && <Payments />}
           {tab === "pending" && <Pending onCollect={(playerId) => setRecording({ open: true, playerId })} />}
-          {tab === "history" && <History />}
+          {tab === "requests" && <PaymentReportsPanel />}
         </div>
       </VoidContext.Provider>
 
@@ -128,31 +137,53 @@ function Fees() {
   );
 }
 
-function Collections() {
+type Span = "this" | "last" | "all";
+
+/** Every recorded payment, newest first: this month by default, or last month or all time, by UPI or cash. */
+function Payments() {
   const { data: config } = useConfig();
   const today = config?.today;
-  const filters: PaymentFilters = { from: today ? `${today.slice(0, 7)}-01` : undefined, to: today };
-  const payments = usePayments(filters, Boolean(today));
-  return <PaymentsView query={payments} emptyMessage="No fees collected this month yet." />;
-}
-
-function History() {
+  const [span, setSpan] = useState<Span>("this");
   const [mode, setMode] = useState<PaymentMode | "ALL">("ALL");
-  const payments = usePayments({ mode: mode === "ALL" ? undefined : mode });
+  const thisMonth = today ? `${today.slice(0, 7)}-01` : undefined;
+  const lastMonthEnd = thisMonth ? addDays(thisMonth, -1) : undefined;
+  const range =
+    span === "this"
+      ? { from: thisMonth, to: today }
+      : span === "last"
+        ? { from: lastMonthEnd && `${lastMonthEnd.slice(0, 7)}-01`, to: lastMonthEnd }
+        : {};
+  const filters: PaymentFilters = { ...range, mode: mode === "ALL" ? undefined : mode };
+  const payments = usePayments(filters, span === "all" || Boolean(today));
   return (
     <>
-      <PillGroup<PaymentMode | "ALL">
-        label="Payment mode"
-        className="mb-4"
-        value={mode}
-        onChange={setMode}
-        options={[
-          { value: "ALL", label: "All modes" },
-          { value: "UPI", label: "UPI" },
-          { value: "CASH", label: "Cash" },
-        ]}
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="sm:w-56">
+          <label htmlFor="payments-span" className="sr-only">
+            Period
+          </label>
+          <Select id="payments-span" value={span} onChange={(e) => setSpan(e.target.value as Span)}>
+            <option value="this">This month{thisMonth ? ` · ${formatMonth(thisMonth)}` : ""}</option>
+            <option value="last">Last month{lastMonthEnd ? ` · ${formatMonth(lastMonthEnd)}` : ""}</option>
+            <option value="all">All time</option>
+          </Select>
+        </div>
+        <PillGroup<PaymentMode | "ALL">
+          label="Payment mode"
+          value={mode}
+          onChange={setMode}
+          options={[
+            { value: "ALL", label: "All modes" },
+            { value: "UPI", label: "UPI" },
+            { value: "CASH", label: "Cash" },
+          ]}
+        />
+      </div>
+      <PaymentsView
+        key={`${span}-${mode}`}
+        query={payments}
+        emptyMessage={span === "all" ? "No payments recorded yet." : "No payments in this period."}
       />
-      <PaymentsView key={mode} query={payments} emptyMessage="No payments recorded yet." />
     </>
   );
 }
@@ -389,26 +420,29 @@ function RemindersPanel() {
     onError: (e) => toast({ tone: "error", title: "Couldn't send reminders", description: errorMessage(e) }),
   });
 
-  const total = (status.data?.sent ?? 0) + (status.data?.failed ?? 0);
+  const undelivered = status.data?.undelivered ?? 0;
   return (
     <Card className="p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="font-semibold">WhatsApp fee reminders</p>
-          <p className="text-sm text-muted">
-            Sent automatically on the 1st of each month to parents with an unpaid new period.
-            {status.data && ` This month: ${status.data.sent} sent${status.data.failed ? `, ${status.data.failed} failed` : ""}.`}
-          </p>
+          <p className="text-sm text-muted">Sent automatically on the 1st of each month to parents with an unpaid new period.</p>
+          {status.data && status.data.delivered + undelivered > 0 && (
+            <p className="mt-1 text-sm font-semibold">
+              This month: <span className="text-primary">{status.data.delivered} delivered</span>
+              {undelivered > 0 && <span className="text-alert-700"> · {undelivered} not delivered</span>}
+            </p>
+          )}
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
-          {total > 0 && (
+          {undelivered > 0 && (
             <Button
               variant="ghost"
               aria-expanded={showing}
               trailingIcon={<ChevronDown className={cn("h-4 w-4 transition-transform", showing && "rotate-180")} aria-hidden />}
               onClick={() => setShowing((s) => !s)}
             >
-              Details
+              Not delivered ({undelivered})
             </Button>
           )}
           <Button variant="secondary" icon={<Send className="h-4 w-4" aria-hidden />} loading={send.isPending} onClick={() => send.mutate()}>
@@ -416,23 +450,26 @@ function RemindersPanel() {
           </Button>
         </div>
       </div>
-      {showing && <ReminderList />}
+      {showing && undelivered > 0 && <ReminderList />}
     </Card>
   );
 }
 
-/** Each parent reminded this month: delivered to Meta, recorded only (WhatsApp wasn't live yet), or Meta's error. */
+/**
+ * Only the parents who weren't reached this month: Meta's error, or recorded while WhatsApp wasn't connected.
+ * Delivered reminders are just counted above; Send now retries everyone listed here.
+ */
 function ReminderList() {
   const list = useQuery({
-    queryKey: [...keys.reminders, "list"],
-    queryFn: () => api<Page<FeeReminder>>("/notifications/fee-reminders", { query: { size: 100 } }),
+    queryKey: [...keys.reminders, "undelivered"],
+    queryFn: () => api<Page<FeeReminder>>("/notifications/fee-reminders", { query: { undelivered: true, size: 100 } }),
   });
   if (list.isError) return <ErrorState error={list.error} onRetry={() => list.refetch()} />;
   if (!list.data) return <Skeleton className="mt-4 h-24 rounded-xl" />;
   return (
     <ul className="mt-4 divide-y divide-line border-t border-line">
       {list.data.content.map((r) => {
-        const recordedOnly = r.status === "SENT" && r.provider === "log";
+        const failed = r.status === "FAILED";
         return (
           <li key={r.id} className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1 py-3">
             <div className="min-w-0">
@@ -443,18 +480,18 @@ function ReminderList() {
                 +91 {r.toMobile.replace(/^91/, "")} · {inr(r.amount)} for {formatMonth(r.periodFrom)}
                 {r.attempts > 1 && ` · ${r.attempts} tries`}
               </p>
-              {r.status === "FAILED" && r.error && <p className="mt-1 text-sm font-medium text-alert-700">{r.error}</p>}
-              {recordedOnly && (
+              {failed && r.error && <p className="mt-1 text-sm font-medium text-alert-700">{r.error}</p>}
+              {!failed && (
                 <p className="mt-1 text-sm text-muted">Recorded while WhatsApp wasn&apos;t connected, so it was never delivered.</p>
               )}
             </div>
             <span
               className={cn(
                 "shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold",
-                r.status === "FAILED" ? "bg-alert-50 text-alert-700" : recordedOnly ? "bg-chip text-muted" : "bg-primary-50 text-primary",
+                failed ? "bg-alert-50 text-alert-700" : "bg-chip text-muted",
               )}
             >
-              {r.status === "FAILED" ? "Failed" : recordedOnly ? "Not sent" : "Sent"}
+              {failed ? "Failed" : "Not sent"}
             </span>
           </li>
         );

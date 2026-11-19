@@ -474,10 +474,13 @@ export interface FeeReminder {
   sentAt: string | null;
 }
 
+/** delivered: accepted by Meta. undelivered: failed, or only recorded while WhatsApp wasn't connected. */
 export interface ReminderStatus {
   month: string;
   sent: number;
   failed: number;
+  delivered: number;
+  undelivered: number;
 }
 
 export interface ApiErrorBody {

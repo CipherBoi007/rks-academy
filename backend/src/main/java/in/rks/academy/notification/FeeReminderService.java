@@ -41,7 +41,11 @@ public class FeeReminderService {
                               int attempts, OffsetDateTime sentAt) {
     }
 
-    public record MonthStatus(String month, long sent, long failed) {
+    /**
+     * sent/failed are the stored outcomes (a run happened if either is non-zero). delivered counts only reminders
+     * Meta accepted; undelivered is everything else, including ones the log provider merely recorded.
+     */
+    public record MonthStatus(String month, long sent, long failed, long delivered, long undelivered) {
     }
 
     private static final Logger log = LoggerFactory.getLogger(FeeReminderService.class);
@@ -89,9 +93,13 @@ public class FeeReminderService {
     }
 
     @Transactional(readOnly = true)
-    public PageResponse<ReminderDto> list(YearMonth month, int page, int size) {
+    public PageResponse<ReminderDto> list(YearMonth month, boolean undeliveredOnly, int page, int size) {
         var pageable = PageRequest.of(page, size, Sort.by(Sort.Order.desc("updatedAt")));
-        return PageResponse.of(reminders.findByPeriodFromBetween(month.atDay(1), month.atEndOfMonth(), pageable),
+        LocalDate from = month.atDay(1);
+        LocalDate to = month.atEndOfMonth();
+        return PageResponse.of(undeliveredOnly
+                        ? reminders.findUndelivered(from, to, pageable)
+                        : reminders.findByPeriodFromBetween(from, to, pageable),
                 r -> new ReminderDto(r.getId(), PlayerRef.of(r.getPlayer()), r.getPeriodFrom(), r.getToMobile(),
                         r.getAmount(), r.getMessage(), r.getStatus(), r.getProvider(), r.getError(),
                         r.getAttempts(), r.getSentAt()));
@@ -101,9 +109,10 @@ public class FeeReminderService {
     public MonthStatus status(YearMonth month) {
         LocalDate from = month.atDay(1);
         LocalDate to = month.atEndOfMonth();
-        return new MonthStatus(month.toString(),
-                reminders.countByPeriodFromBetweenAndStatus(from, to, FeeReminder.Status.SENT),
-                reminders.countByPeriodFromBetweenAndStatus(from, to, FeeReminder.Status.FAILED));
+        long sent = reminders.countByPeriodFromBetweenAndStatus(from, to, FeeReminder.Status.SENT);
+        long failed = reminders.countByPeriodFromBetweenAndStatus(from, to, FeeReminder.Status.FAILED);
+        long delivered = reminders.countDelivered(from, to);
+        return new MonthStatus(month.toString(), sent, failed, delivered, sent + failed - delivered);
     }
 
     private enum Outcome { SENT, FAILED, ALREADY_SENT }

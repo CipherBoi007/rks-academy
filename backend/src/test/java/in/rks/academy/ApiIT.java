@@ -111,6 +111,13 @@ class ApiIT {
         JsonNode log = get(owner, "/notifications/fee-reminders?month=2026-11");
         assertThat(log.get("totalElements").asInt()).isEqualTo(8);
         assertThat(log.get("content").get(0).get("toMobile").asText()).startsWith("91");
+
+        // Tests use the log provider: recorded, but delivered to nobody, so all 8 need attention.
+        JsonNode status = get(owner, "/notifications/fee-reminders/status?month=2026-11");
+        assertThat(status.get("delivered").asInt()).isZero();
+        assertThat(status.get("undelivered").asInt()).isEqualTo(8);
+        assertThat(get(owner, "/notifications/fee-reminders?month=2026-11&undelivered=true").get("totalElements")
+                .asInt()).isEqualTo(8);
         assertThat(call(coach, HttpMethod.POST, "/notifications/fee-reminders", null).getStatusCode())
                 .isEqualTo(HttpStatus.FORBIDDEN);
     }

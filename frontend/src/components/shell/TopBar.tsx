@@ -4,7 +4,7 @@ import Link from "next/link";
 import { BadgePercent, Bell, KeyRound, LogOut, Settings } from "lucide-react";
 import { Popover } from "@/components/ui/Popover";
 import { inr } from "@/lib/format";
-import { useCanSeeFees, useDues, useMe, useReminderStatus } from "@/lib/queries";
+import { useCanSeeFees, useDues, useMe, usePaymentReports, useReminderStatus } from "@/lib/queries";
 import { Logo } from "./Logo";
 import { useSignOut } from "./useSignOut";
 
@@ -80,7 +80,10 @@ function Notifications({ enabled }: { enabled: boolean }) {
   const reminders = useReminderStatus(enabled);
   const dueCount = dues.data?.totalElements ?? 0;
   const dueTotal = dues.data?.content.reduce((sum, d) => sum + d.amount, 0) ?? 0;
-  const hasNews = enabled && dueCount > 0;
+  const requests = usePaymentReports(enabled);
+  const waiting = requests.data?.filter((r) => r.status === "PENDING").length ?? 0;
+  const undelivered = reminders.data?.undelivered ?? 0;
+  const hasNews = enabled && (dueCount > 0 || undelivered > 0 || waiting > 0);
 
   return (
     <Popover
@@ -106,16 +109,26 @@ function Notifications({ enabled }: { enabled: boolean }) {
           <p className="px-3 py-4 text-[15px] text-muted">You&apos;re all caught up.</p>
         ) : (
           <div className="space-y-1">
+            {waiting > 0 && (
+              <Link href="/fees?tab=requests" role="menuitem" className={menuItem} onClick={close}>
+                <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-primary" aria-hidden />
+                <span className="font-semibold">
+                  {waiting === 1 ? "1 UPI payment to confirm" : `${waiting} UPI payments to confirm`}
+                </span>
+              </Link>
+            )}
             <Link href="/fees?tab=pending" role="menuitem" className={menuItem} onClick={close}>
               <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-alert" aria-hidden />
               <span>
                 {dueCount === 0 ? "No pending dues" : `${dueCount} players have dues · ${inr(dueTotal)}`}
               </span>
             </Link>
-            {reminders.data && (
+            {reminders.data && reminders.data.delivered + reminders.data.undelivered > 0 && (
               <p className="px-3 py-2 text-sm text-muted">
-                WhatsApp reminders this month: {reminders.data.sent} sent
-                {reminders.data.failed > 0 ? `, ${reminders.data.failed} failed` : ""}
+                WhatsApp reminders this month: {reminders.data.delivered} delivered
+                {reminders.data.undelivered > 0 && (
+                  <span className="font-semibold text-alert-700"> · {reminders.data.undelivered} not delivered</span>
+                )}
               </p>
             )}
           </div>

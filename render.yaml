@@ -32,6 +32,10 @@ services:
         value: "910000000000"
       - key: APP_ACADEMY_PHONE
         value: "+91 00000 00000"
+      - key: APP_UPI_ID
+        sync: false # the academy's business UPI ID for Pay in the family app; empty = pay at the desk
+      - key: APP_UPI_PAYEE
+        value: RKS Academy
       - key: APP_WHATSAPP_PROVIDER
         value: log
       # Off until WhatsApp is live: in "log" mode a month's reminders are recorded as sent and won't be resent.

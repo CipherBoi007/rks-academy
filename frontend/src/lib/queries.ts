@@ -252,7 +252,6 @@ export const usePaymentReports = (enabled = true) =>
     queryKey: keys.paymentReports,
     queryFn: () => api<PaymentReport[]>("/payment-reports"),
     enabled,
-    refetchInterval: 60_000,
   });
 
 export const useReminderStatus = (enabled: boolean) =>

@@ -6,6 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 public interface FeeReminderRepository extends JpaRepository<FeeReminder, Long> {
 
@@ -15,4 +16,22 @@ public interface FeeReminderRepository extends JpaRepository<FeeReminder, Long> 
     Page<FeeReminder> findByPeriodFromBetween(LocalDate from, LocalDate to, Pageable pageable);
 
     long countByPeriodFromBetweenAndStatus(LocalDate from, LocalDate to, FeeReminder.Status status);
+
+    // "Delivered" means Meta accepted it. The log provider only records a reminder, so it reached nobody.
+
+    @Query("""
+            select count(r) from FeeReminder r
+            where r.periodFrom between :from and :to
+              and r.status = in.rks.academy.notification.FeeReminder.Status.SENT and r.provider <> 'log'
+            """)
+    long countDelivered(LocalDate from, LocalDate to);
+
+    /** Reminders that need attention: failed at Meta, or only recorded while WhatsApp wasn't connected. */
+    @EntityGraph(attributePaths = "player")
+    @Query("""
+            select r from FeeReminder r
+            where r.periodFrom between :from and :to
+              and (r.status = in.rks.academy.notification.FeeReminder.Status.FAILED or r.provider = 'log')
+            """)
+    Page<FeeReminder> findUndelivered(LocalDate from, LocalDate to, Pageable pageable);
 }

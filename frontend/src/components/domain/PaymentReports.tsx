@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Field, Textarea } from "@/components/ui/Field";
 import { Sheet } from "@/components/ui/Sheet";
-import { ErrorState } from "@/components/ui/States";
+import { EmptyState, ErrorState, Skeleton } from "@/components/ui/States";
 import { useToast } from "@/components/ui/Toast";
 import { api, errorMessage } from "@/lib/api";
 import { cn } from "@/lib/cn";
@@ -21,9 +21,9 @@ import type { PaymentReport } from "@/lib/types";
 const AFFECTED = [keys.paymentReports, keys.payments, keys.dues, keys.summary, keys.players, keys.reminders, ["quote"]];
 
 /**
- * UPI payments parents reported from the family app. The owner checks each reference in the bank app, then
- * confirms (receipts are issued, dated the day the parent paid) or rejects with a reason the parent sees.
- * Hidden when there has been nothing to review in the last 30 days.
+ * The Fees page's Requests tab: UPI payments parents reported from the family app. The owner checks each
+ * reference in the bank app, then confirms (receipts are issued, dated the day the parent paid) or rejects with
+ * a reason the parent sees. Decided requests stay listed for 30 days.
  */
 export function PaymentReportsPanel() {
   const reports = usePaymentReports();
@@ -37,7 +37,17 @@ export function PaymentReportsPanel() {
       </Card>
     );
   }
-  if (!reports.data || reports.data.length === 0) return null;
+  if (!reports.data) return <Skeleton className="h-28 rounded-2xl" />;
+  if (reports.data.length === 0) {
+    return (
+      <Card>
+        <EmptyState
+          title="No payment requests"
+          message="When a parent pays by UPI in the family app and reports it, it appears here for you to confirm."
+        />
+      </Card>
+    );
+  }
   const waiting = reports.data.filter((r) => r.status === "PENDING");
   const decided = reports.data.filter((r) => r.status !== "PENDING");
 
@@ -46,12 +56,12 @@ export function PaymentReportsPanel() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="font-semibold">
-            UPI payments from parents{waiting.length > 0 && <span className="ml-2 rounded-full bg-primary px-2 py-0.5 text-xs text-white">{waiting.length} to check</span>}
+            Payment requests from parents{waiting.length > 0 && <span className="ml-2 rounded-full bg-primary px-2 py-0.5 text-xs text-white">{waiting.length} to check</span>}
           </p>
           <p className="text-sm text-muted">
             {waiting.length > 0
               ? "Find each reference in your bank or UPI app, then confirm it to issue the receipts."
-              : "Nothing waiting. Parents' UPI payments from the family app appear here."}
+              : "Nothing waiting right now."}
           </p>
         </div>
         {decided.length > 0 && (

@@ -40,11 +40,13 @@ public class FeeReminderController {
         return reminders.sendForCurrentMonth();
     }
 
+    @Operation(summary = "This month's reminders; ?undelivered=true lists only those that reached nobody")
     @GetMapping
     public PageResponse<ReminderDto> list(@RequestParam(required = false) @Pattern(regexp = "\\d{4}-\\d{2}") String month,
+                                          @RequestParam(defaultValue = "false") boolean undelivered,
                                           @RequestParam(defaultValue = "0") @Min(0) int page,
                                           @RequestParam(defaultValue = "50") @Min(1) @Max(100) int size) {
-        return reminders.list(month(month), page, size);
+        return reminders.list(month(month), undelivered, page, size);
     }
 
     @GetMapping("/status")
