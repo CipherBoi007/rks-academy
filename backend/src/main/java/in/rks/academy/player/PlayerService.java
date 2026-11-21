@@ -23,7 +23,7 @@ import in.rks.academy.player.PlayerDtos.BatchInfo;
 import in.rks.academy.player.PlayerDtos.CoachInfo;
 import in.rks.academy.player.PlayerDtos.FeeStatus;
 import in.rks.academy.player.PlayerDtos.LevelStep;
-import in.rks.academy.player.PlayerDtos.ParentInfo;
+import in.rks.academy.player.PlayerDtos.ContactInfo;
 import in.rks.academy.player.PlayerDtos.PlayerAttendance;
 import in.rks.academy.player.PlayerDtos.PlayerDetail;
 import in.rks.academy.player.PlayerDtos.PlayerRequest;
@@ -218,9 +218,9 @@ public class PlayerService {
         p.setName(req.name().trim());
         p.setDob(req.dob());
         p.setGender(req.gender());
-        p.setParentName(req.parentName().trim());
-        p.setParentMobile(req.parentMobile());
-        p.setParentOccupation(blankToNull(req.parentOccupation()));
+        applyContact(p, req);
+        p.setContactMobile(req.contactMobile());
+        p.setContactOccupation(blankToNull(req.contactOccupation()));
         p.setBloodGroup(blankToNull(req.bloodGroup()));
         p.setSchool(blankToNull(req.school()));
         p.setAddress(blankToNull(req.address()));
@@ -228,6 +228,28 @@ public class PlayerService {
         p.setBatch(batch);
         p.setFeePlan(plan);
         p.setSiblingGroupId(siblingGroupFor(p, req.siblingOfPlayerId()));
+    }
+
+    /**
+     * An adult can manage their own account; anyone younger needs a parent or guardian. For SELF the contact name
+     * is the player's own, so it can never drift from it.
+     */
+    private void applyContact(Player p, PlayerRequest req) {
+        if (req.contactRelation() == Player.ContactRelation.SELF) {
+            if (p.ageOn(billing.today()) < Player.ADULT_AGE) {
+                throw ApiException.rule("MINOR_NEEDS_GUARDIAN",
+                        "Players under " + Player.ADULT_AGE + " need a parent or guardian as their contact");
+            }
+            p.setContactName(p.getName());
+        } else {
+            String name = blankToNull(req.contactName());
+            if (name == null) {
+                throw ApiException.rule("CONTACT_NAME_REQUIRED", "Enter the "
+                        + (req.contactRelation() == Player.ContactRelation.PARENT ? "parent" : "guardian") + "'s name");
+            }
+            p.setContactName(name);
+        }
+        p.setContactRelation(req.contactRelation());
     }
 
     /** Joins the given player's sibling group, creating one if they don't have a group yet. */
@@ -273,7 +295,8 @@ public class PlayerService {
         return new PlayerDetail(p.getId(), p.getCode(), p.getName(), Names.initials(p.getName()), p.getPhotoUrl(),
                 p.getDob(), p.ageOn(billing.today()), p.getGender(), p.getBloodGroup(), p.getSchool(),
                 p.getAddress(), p.getLevel(), status(state),
-                new ParentInfo(p.getParentName(), p.getParentMobile(), p.getParentOccupation()), p.getJoinDate(),
+                new ContactInfo(p.getContactRelation(), p.getContactName(), p.getContactMobile(),
+                        p.getContactOccupation()), p.getJoinDate(),
                 new BatchInfo(b.getId(), b.getName(), b.getStartTime(), b.getEndTime()),
                 CourtRef.of(b.getCourt()),
                 new CoachInfo(c.getId(), c.getName(), c.getTitle(), Names.initials(c.getName())),

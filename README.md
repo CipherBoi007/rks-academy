@@ -6,7 +6,7 @@ A management system for **Raja Kumaran Sethupathi Sports Academy, Ramanathapuram
 - calendar-month fees with receipts
 - WhatsApp fee reminders
 - the RKS Pro Shop
-- a separate app where **parents** follow their children
+- a separate app where **families** follow their players: parents and guardians for children, adults for themselves
 
 This README is the developer guide. It explains what the system does, how every part fits together, and the non-obvious decisions behind it: authentication, the proxy, the database schema, free-tier hosting and the WhatsApp setup. Read it top to bottom once; after that, use the table of contents.
 
@@ -33,7 +33,7 @@ This README is the developer guide. It explains what the system does, how every 
 10. [Database](#10-database)
 11. [Business rules: billing](#11-business-rules-billing)
 12. [Fee reminders and WhatsApp](#12-fee-reminders-and-whatsapp)
-13. [The family app (parents)](#13-the-family-app-parents)
+13. [The family app (parents and adult players)](#13-the-family-app-parents-and-adult-players)
 14. [The shop and advertisements](#14-the-shop-and-advertisements)
 15. [Image uploads](#15-image-uploads)
 16. [Frontend guide](#16-frontend-guide)
@@ -296,7 +296,7 @@ Example: the owner opens a player's profile, which calls `GET /api/v1/players/42
 
 ### Session revocation: the token version
 
-Every `admin_user` and `parent_account` row has a `token_version`. It is copied into the JWT as `tv`. On each request `JwtAuthFilter` compares the two, and a mismatch means the token is ignored.
+Every `admin_user` and `family_account` row has a `token_version`. It is copied into the JWT as `tv`. On each request `JwtAuthFilter` compares the two, and a mismatch means the token is ignored.
 
 The version is incremented when:
 - the PIN is changed or reset
@@ -309,10 +309,10 @@ So **one database update signs that person out of every device instantly**, with
 
 Parents sign in like staff, with no message sent, so sign-in costs nothing however often the form is used. (Until V7 a code was sent on WhatsApp, which Meta bills per message.)
 
-1. **The owner issues a one-time PIN** from the player's profile (**Parent app → Create PIN / Reset PIN**): `POST /api/v1/players/{id}/parent-login/pin`, owner only.
-   - It creates the `parent_account` for the player's parent mobile if needed, stores a **bcrypt hash** in `pin_hash`, sets `must_change_pin` and bumps `token_version` (signing the parent out everywhere).
+1. **The owner issues a one-time PIN** from the player's profile (**Family app → Create PIN / Reset PIN**): `POST /api/v1/players/{id}/family-login/pin`, owner only.
+   - It creates the `family_account` for the player's contact mobile if needed, stores a **bcrypt hash** in `pin_hash`, sets `must_change_pin` and bumps `token_version` (signing the parent out everywhere).
    - The PIN is shown once. The owner passes it on in person, by phone, or with **Send from my WhatsApp** (opens the owner's own WhatsApp; nothing goes through the academy's paid number).
-   - Brothers and sisters share one sign-in, because it belongs to the parent's mobile number. Reset PIN is also the fix for a forgotten PIN.
+   - Everyone on one contact number shares one sign-in (brothers and sisters, or a parent who also plays), because it belongs to the mobile number. Reset PIN is also the fix for a forgotten PIN.
 2. `POST /api/v1/family/auth/login` with `{ mobile, pin }`.
    - A wrong number and a wrong PIN get the same `401`, so nobody can probe which numbers are parents.
    - **5 wrong PINs in a row lock the number for 5 minutes** (`LoginAttemptLimiter`, kept apart from staff lockouts).
@@ -464,7 +464,8 @@ The schema is created and evolved **only** by Flyway scripts, which run automati
 | `V4__admin_and_voids.sql` | Staff-login columns (token version, forced PIN change) and payment voids |
 | `V5__family_portal.sql` | `parent_account`, `login_code` |
 | `V7__family_pins.sql` | parent PINs (`pin_hash`, `must_change_pin`); drops `login_code` |
-| `V8__payment_reports.sql` | `payment_report`, `payment_report_item`: UPI payments parents report, confirmed or rejected by the owner |
+| `V8__payment_reports.sql` | `payment_report`, `payment_report_item`: UPI payments families report, confirmed or rejected by the owner |
+| `V9__player_contacts.sql` | `player.parent_*` becomes `contact_*` plus `contact_relation` (SELF, PARENT, GUARDIAN); `parent_account` becomes `family_account` |
 | `V6__stored_files_and_rls.sql` | `stored_file` (uploaded images), and **row-level security switched on** for every table |
 | `db/demo/V2_1 … V2_5` | **Dev only:** demo staff logins, players, payments, attendance, products |
 | `db/demo/V6_1` | **Dev only:** moves the demo logins' PIN from `1234` to `123456` (PINs became 6–12 digits) |
@@ -562,7 +563,17 @@ When Meta rejects a message, the app stores and shows Meta's exact error, for ex
 
 ---
 
-## 13. The family app (parents)
+## 13. The family app (parents and adult players)
+
+**Who signs in.** Every player has one **contact** who manages their account (`player.contact_relation`):
+
+| Relation | Who | Rules |
+|---|---|---|
+| `PARENT` / `GUARDIAN` | a child's parent or guardian | their name is required |
+| `SELF` | the player themselves | 18 or over only (`MINOR_NEEDS_GUARDIAN` otherwise); the contact name is always the player's own |
+
+The contact's mobile number is the family-app sign-in, fee reminders go to it, and receipts say "Received from" the contact. Everyone on one number shares one `family_account`, so a parent who also plays sees themselves (marked **You**) and their children in one app, with one Fees page and one UPI payment. Sibling discounts stay explicit (**Sibling at RKS** on the player form), so an adult and their child sharing a number are never treated as siblings.
+
 
 Path: **`/family`**. Its own frame (`FamilyShell`): a light header, a two-tab bar (Home, Shop) on phones, and a wide layout on desktop.
 

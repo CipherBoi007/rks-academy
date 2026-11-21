@@ -120,7 +120,7 @@ public final class BillingDtos {
     }
 
     public record ReceiptDto(String receiptNo, LocalDate issuedOn, String academyName, String academyAddress,
-                             String academyPhone, String playerCode, String playerName, String parentName,
+                             String academyPhone, String playerCode, String playerName, String receivedFrom,
                              String batchName, String planName, LocalDate periodFrom, LocalDate periodTo,
                              List<ReceiptLine> lines, BigDecimal total, String totalInWords, Payment.Mode mode,
                              String recordedBy, String note, boolean voided, OffsetDateTime voidedAt,

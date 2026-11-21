@@ -26,7 +26,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Month-start WhatsApp fee reminders to the parents of players whose new billing period starts this month and
+ * Month-start WhatsApp fee reminders to the contacts (parent, guardian or the adult player) of players whose new billing period starts this month and
  * isn't paid yet. Players paid in advance, or mid-way through a quarterly or annual period, get nothing.
  * Each player is reminded at most once per period, so running it again only retries failed sends.
  */
@@ -128,10 +128,10 @@ public class FeeReminderService {
             return Outcome.ALREADY_SENT;
         }
         int dueByDay = FeeRules.policyOn(policies.allTerms(), q.period().from()).lateFeeAfterDay();
-        List<String> params = List.of(p.getParentName(), p.getName(), p.getCode(), p.getFeePlan().getName(),
+        List<String> params = List.of(p.getContactName(), p.getName(), p.getCode(), p.getFeePlan().getName(),
                 periodLabel(q), rupees(q.total()), q.period().from().withDayOfMonth(dueByDay).format(DAY));
         String text = message(params);
-        String to = INDIA + p.getParentMobile();
+        String to = INDIA + p.getContactMobile();
 
         WhatsAppSender.Result result = sender.send(
                 new WhatsAppSender.Message(to, templateName, text, params));

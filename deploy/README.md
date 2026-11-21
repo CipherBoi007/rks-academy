@@ -111,13 +111,13 @@ Meta bills each message to the academy's account (utility messages in India cost
 Before relying on it for real fees:
 
 - [ ] Owner and every coach can sign in on their own phones and have set their own PINs
-- [ ] All players added, with correct batch, plan, join date and parent mobile
+- [ ] All players added, with correct batch, plan, join date and contact (parent, guardian, or the player if 18+) mobile
 - [ ] Every player who has already paid for this month is recorded (otherwise they will show as due)
 - [ ] One week of attendance taken by the coaches
 - [ ] One payment recorded, its receipt printed, then voided and recorded again
 - [ ] A CSV export opened in Excel by the accountant
 - [ ] A WhatsApp test message received
-- [ ] A parent signs in to `https://<your domain>/family` with a WhatsApp code and sees their child
+- [ ] A parent (or an adult player) signs in to `https://<your domain>/family` with their mobile number and PIN and sees their players
 - [ ] A backup restored on a test copy
 
 ## 8. Security notes

@@ -12,7 +12,7 @@ public final class CurrentUser {
 
     public static AuthUser get() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        // Family principals are a different type, so a parent can never pass as staff here.
+        // Family principals are a different type, so a family account can never pass as staff here.
         if (auth == null || !(auth.getPrincipal() instanceof AuthUser user)) {
             throw new ApiException(HttpStatus.UNAUTHORIZED, "UNAUTHENTICATED", "Please sign in");
         }

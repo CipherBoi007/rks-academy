@@ -21,7 +21,7 @@ import java.util.List;
 import lombok.Getter;
 import lombok.Setter;
 
-/** A parent's report of a UPI payment to the academy, waiting for the owner to confirm or reject it. */
+/** A family's report of a UPI payment to the academy, waiting for the owner to confirm or reject it. */
 @Getter
 @Setter
 @Entity
@@ -31,8 +31,9 @@ public class PaymentReport extends BaseEntity {
     public enum Status { PENDING, CONFIRMED, REJECTED }
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "parent_account_id")
-    private ParentAccount parent;
+    /** The family-app account that reported it. */
+    @JoinColumn(name = "family_account_id")
+    private FamilyAccount account;
 
     /** The UPI reference (UTR), upper case without spaces. */
     @Column(nullable = false)

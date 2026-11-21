@@ -12,23 +12,24 @@ import { useToast } from "@/components/ui/Toast";
 import { api, errorMessage } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { formatDate, formatMobile } from "@/lib/format";
-import { keys, useParentLogin } from "@/lib/queries";
-import type { IssuedParentPin, ParentLogin } from "@/lib/types";
+import { keys, useFamilyLogin } from "@/lib/queries";
+import type { FamilyLogin, IssuedFamilyPin } from "@/lib/types";
 
 /**
- * Owner only: the parent's sign-in to the family portal. The owner issues a one-time PIN here (also the fix for a
- * forgotten PIN) and passes it on in person, by phone or from their own WhatsApp, so the academy pays nothing.
+ * Owner only: the family-app sign-in for the player's contact number (a parent or guardian, or an adult player
+ * themselves). The owner issues a one-time PIN here (also the fix for a forgotten PIN) and passes it on in person,
+ * by phone or from their own WhatsApp, so the academy pays nothing.
  */
-export function ParentLoginCard({ playerId }: { playerId: number }) {
-  const login = useParentLogin(playerId);
+export function FamilyLoginCard({ playerId }: { playerId: number }) {
+  const login = useFamilyLogin(playerId);
   const toast = useToast();
   const queryClient = useQueryClient();
-  const [issued, setIssued] = useState<IssuedParentPin | null>(null);
+  const [issued, setIssued] = useState<IssuedFamilyPin | null>(null);
 
   const issue = useMutation({
-    mutationFn: () => api<IssuedParentPin>(`/players/${playerId}/parent-login/pin`, { method: "POST" }),
+    mutationFn: () => api<IssuedFamilyPin>(`/players/${playerId}/family-login/pin`, { method: "POST" }),
     onSuccess: (res) => {
-      queryClient.setQueryData(keys.parentLogin(playerId), res.login);
+      queryClient.setQueryData(keys.familyLogin(playerId), res.login);
       setIssued(res);
     },
     onError: (e) => toast({ tone: "error", title: "Couldn't create the PIN", description: errorMessage(e) }),
@@ -44,11 +45,12 @@ export function ParentLoginCard({ playerId }: { playerId: number }) {
       </span>
       <div className="min-w-0 flex-1">
         <p className="flex flex-wrap items-center gap-2 font-semibold">
-          Parent app
+          Family app
           <Chip className={status.chip}>{status.label}</Chip>
         </p>
         <p className="text-sm text-muted">
-          {login.data.parentName} · {formatMobile(login.data.mobile)} · {status.detail}
+          {login.data.relation === "SELF" ? "The player's own sign-in" : login.data.holderName} ·{" "}
+          {formatMobile(login.data.mobile)} · {status.detail}
         </p>
       </div>
       <Button
@@ -63,7 +65,7 @@ export function ParentLoginCard({ playerId }: { playerId: number }) {
 
       <OneTimePinSheet
         pin={issued?.temporaryPin ?? null}
-        description={issued ? `For ${issued.login.parentName} · ${formatMobile(issued.login.mobile)}` : ""}
+        description={issued ? `For ${issued.login.holderName} · ${formatMobile(issued.login.mobile)}` : ""}
         onClose={() => setIssued(null)}
       >
         {issued && (
@@ -77,9 +79,10 @@ export function ParentLoginCard({ playerId }: { playerId: number }) {
               <MessageCircle className="h-4 w-4" aria-hidden /> Send from my WhatsApp
             </a>
             <p className="text-[15px] text-muted">
-              The parent signs in at <span className="font-medium text-ink">{familyUrl()}</span> with their mobile number
-              and this PIN, then chooses their own. Brothers and sisters share one sign-in. Any earlier PIN has stopped
-              working. This PIN won&apos;t be shown again; use Reset PIN if it&apos;s lost.
+              {issued.login.relation === "SELF" ? "The player signs" : "They sign"} in at{" "}
+              <span className="font-medium text-ink">{familyUrl()}</span> with this mobile number and PIN, then choose
+              their own. Everyone on this number shares one sign-in. Any earlier PIN has stopped working. This PIN
+              won&apos;t be shown again; use Reset PIN if it&apos;s lost.
             </p>
           </>
         )}
@@ -88,7 +91,7 @@ export function ParentLoginCard({ playerId }: { playerId: number }) {
   );
 }
 
-function describe(login: ParentLogin): { label: string; chip: string; detail: string } {
+function describe(login: FamilyLogin): { label: string; chip: string; detail: string } {
   if (!login.hasPin) return { label: "Not set up", chip: "bg-chip text-muted", detail: "No PIN yet" };
   if (login.mustChangePin) {
     return { label: "PIN not used yet", chip: "bg-alert-50 text-alert-700", detail: "Waiting for first sign-in" };
@@ -105,9 +108,9 @@ function familyUrl() {
 }
 
 /** Opens the owner's own WhatsApp with the message ready; nothing goes through the academy's paid number. */
-function whatsAppLink(issued: IssuedParentPin) {
+function whatsAppLink(issued: IssuedFamilyPin) {
   const text =
-    `Vanakkam! Your RKS Academy parent app PIN is ${issued.temporaryPin}. ` +
+    `Vanakkam! Your RKS Academy family app PIN is ${issued.temporaryPin}. ` +
     `Open ${window.location.origin}/family, sign in with this mobile number and the PIN, then choose your own PIN.`;
   return `https://wa.me/91${issued.login.mobile}?text=${encodeURIComponent(text)}`;
 }

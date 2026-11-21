@@ -39,7 +39,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-/** The family portal API: sign-in by mobile number and PIN, then read-only access to the parent's own children. */
+/** The family portal API: sign-in by mobile number and PIN, then read-only access to the account's own players. */
 @Tag(name = "Family portal")
 @Validated
 @RestController
@@ -72,28 +72,28 @@ public class FamilyController {
 
     // ---- Sign-in (public) ---------------------------------------------------------------------------------
 
-    @Operation(summary = "Sign in with the parent's mobile number and PIN. A one-time PIN returns mustChangePin "
+    @Operation(summary = "Sign in with the contact mobile number and PIN. A one-time PIN returns mustChangePin "
             + "and no token: call set-pin with it first.")
     @PostMapping("/auth/login")
     public ResponseEntity<FamilySession> login(@Valid @RequestBody LoginRequest req) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(auth.login(req.mobile(), req.pin()));
     }
 
-    @Operation(summary = "Replace the parent's PIN (the one-time PIN, or their own) and sign in")
+    @Operation(summary = "Replace the account's PIN (the one-time PIN, or their own) and sign in")
     @PostMapping("/auth/set-pin")
     public ResponseEntity<FamilySession> setPin(@Valid @RequestBody SetPinRequest req) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore())
                 .body(auth.setPin(req.mobile(), req.currentPin(), req.newPin()));
     }
 
-    // ---- The parent's own children ------------------------------------------------------------------------
+    // ---- The account's own players -------------------------------------------------------------------------
 
     @GetMapping("/me")
     public Family me() {
         return family.family();
     }
 
-    @Operation(summary = "Sign this parent out on every device")
+    @Operation(summary = "Sign this account out on every device")
     @PostMapping("/sign-out-everywhere")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void signOutEverywhere() {

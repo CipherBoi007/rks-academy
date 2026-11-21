@@ -123,8 +123,8 @@ class FeeReminderServiceTest {
         ReflectionTestUtils.setField(p, "id", id);
         p.setName(name);
         p.setCode(code);
-        p.setParentName("Parent of " + name);
-        p.setParentMobile(mobile);
+        p.setContactName("Parent of " + name);
+        p.setContactMobile(mobile);
         p.setFeePlan(plan);
         BigDecimal amount = new BigDecimal(total);
         FeeQuote quote = new FeeQuote(new BillingPeriod(LocalDate.parse(from), LocalDate.parse(to)), amount, 1,

@@ -110,18 +110,36 @@ INSERT INTO admin_user (name, mobile, pin_hash, role, coach_id, must_change_pin)
 -- 8. Players. One line per player; batch and plan are matched by the names used above.
 --    dob / join_date: 'YYYY-MM-DD'.  gender: MALE, FEMALE or OTHER.  level: as in section 4.
 --    blood_group (or NULL): A+ A- B+ B- AB+ AB- O+ O-.
---    Children with the same parent mobile are linked as siblings automatically (for the sibling discount),
---    and that mobile is what the parent signs in to the family portal with.
+--    relation: who manages the account. PARENT or GUARDIAN (give their name), or SELF for an adult (18+)
+--    who manages their own account (contact name = NULL; their own name is used).
+--    The contact mobile is what the family app signs in with: everyone sharing it shares one sign-in.
+--    Children with the same contact mobile are linked as siblings automatically (for the sibling discount);
+--    an adult player (SELF) never is, even when their own child is on the same number.
 -- -----------------------------------------------------------------------------------------------------
 CREATE TEMP TABLE new_player (
-    name text, dob date, gender text, parent_name text, parent_mobile text, level text,
+    name text, dob date, gender text, relation text, contact_name text, contact_mobile text, level text,
     batch_name text, plan_name text, join_date date, school text, blood_group text
 ) ON COMMIT DROP;
 
 INSERT INTO new_player VALUES
---   name                 dob           gender    parent name          parent mobile  level         batch                 plan        joined        school               blood
-    ('CHANGE_ME Child A', '2014-05-20', 'MALE',   'CHANGE_ME Parent',  'CHANGE_ME',   'BEGINNER',   'Morning Beginners',  'Monthly',  '2026-11-01', 'CHANGE_ME School',  'O+'),   -- CHANGE
-    ('CHANGE_ME Child B', '2016-02-11', 'FEMALE', 'CHANGE_ME Parent',  'CHANGE_ME',   'BEGINNER',   'Evening Juniors',    'Quarterly','2026-11-01', NULL,                NULL);   -- CHANGE
+--   name                 dob           gender    relation   contact name         contact mobile  level         batch                 plan        joined        school               blood
+    ('CHANGE_ME Child A', '2014-05-20', 'MALE',   'PARENT',  'CHANGE_ME Parent',  'CHANGE_ME',    'BEGINNER',   'Morning Beginners',  'Monthly',  '2026-11-01', 'CHANGE_ME School',  'O+'),   -- CHANGE
+    ('CHANGE_ME Child B', '2016-02-11', 'FEMALE', 'PARENT',  'CHANGE_ME Parent',  'CHANGE_ME',    'BEGINNER',   'Evening Juniors',    'Quarterly','2026-11-01', NULL,                NULL),   -- CHANGE
+    ('CHANGE_ME Adult',   '1992-08-30', 'MALE',   'SELF',    NULL,                'CHANGE_ME_A',  'BEGINNER',   'Morning Beginners',  'Monthly',  '2026-11-01', NULL,                NULL);   -- CHANGE (or delete)
+
+-- Stop on a contact that the app would refuse: under-18s need a parent or guardian, who must be named.
+DO $$
+DECLARE bad text;
+BEGIN
+    SELECT string_agg(n.name, ', ') INTO bad
+    FROM new_player n
+    WHERE n.relation NOT IN ('SELF', 'PARENT', 'GUARDIAN')
+       OR (n.relation = 'SELF' AND n.dob > current_date - INTERVAL '18 years')
+       OR (n.relation <> 'SELF' AND coalesce(trim(n.contact_name), '') = '');
+    IF bad IS NOT NULL THEN
+        RAISE EXCEPTION 'Check the contact for: %. Under-18s need a named PARENT or GUARDIAN. Nothing was saved.', bad;
+    END IF;
+END $$;
 
 -- Stop if a batch or plan name above doesn't exist (otherwise that player would silently be skipped).
 DO $$
@@ -140,9 +158,10 @@ END $$;
 -- Same steps as adding a player in the app: next RKS code, plan starts on the 1st of the joining month,
 -- and the starting level goes into the level history.
 WITH added AS (
-    INSERT INTO player (code, name, dob, gender, parent_name, parent_mobile, level, batch_id, fee_plan_id,
-                        join_date, plan_start_date, school, blood_group)
-    SELECT 'RKS' || nextval('player_code_seq'), n.name, n.dob, n.gender, n.parent_name, n.parent_mobile,
+    INSERT INTO player (code, name, dob, gender, contact_relation, contact_name, contact_mobile, level, batch_id,
+                        fee_plan_id, join_date, plan_start_date, school, blood_group)
+    SELECT 'RKS' || nextval('player_code_seq'), n.name, n.dob, n.gender, n.relation,
+           CASE WHEN n.relation = 'SELF' THEN n.name ELSE trim(n.contact_name) END, n.contact_mobile,
            n.level, b.id, f.id, n.join_date, date_trunc('month', n.join_date)::date, n.school, n.blood_group
     FROM new_player n
     JOIN batch b ON b.name = n.batch_name AND b.active
@@ -152,15 +171,17 @@ WITH added AS (
 INSERT INTO player_level_history (player_id, level, achieved_on)
 SELECT id, level, join_date FROM added;
 
--- Link brothers and sisters: active players sharing a parent mobile get one sibling group.
+-- Link brothers and sisters: active children sharing a contact mobile get one sibling group. Adult players
+-- managing their own account are left out, so a parent who also plays is never their child's "sibling".
 UPDATE player p
 SET sibling_group_id = g.group_id, updated_at = now()
-FROM (SELECT parent_mobile, gen_random_uuid() AS group_id
+FROM (SELECT contact_mobile, gen_random_uuid() AS group_id
       FROM player
-      WHERE active AND parent_mobile IN (SELECT parent_mobile FROM new_player)
-      GROUP BY parent_mobile
+      WHERE active AND contact_relation <> 'SELF' AND contact_mobile IN (SELECT contact_mobile FROM new_player)
+      GROUP BY contact_mobile
       HAVING count(*) > 1) g
-WHERE p.active AND p.parent_mobile = g.parent_mobile AND p.sibling_group_id IS NULL;
+WHERE p.active AND p.contact_relation <> 'SELF' AND p.contact_mobile = g.contact_mobile
+  AND p.sibling_group_id IS NULL;
 
 
 -- -----------------------------------------------------------------------------------------------------

@@ -19,7 +19,7 @@ import type {
   Receipt,
 } from "./types";
 
-/** Family portal data. Every call goes to /api/v1/family/*, which only ever returns the parent's own children. */
+/** Family portal data. Every call goes to /api/v1/family/*, which only ever returns the account's own players. */
 
 export interface FamilyChild {
   id: number;
@@ -38,11 +38,14 @@ export interface FamilyChild {
   feeStatus: FeeStatus;
   due: { amount: number; periodFrom: string; periodTo: string; payBy: string } | null;
   attendancePct: number;
+  /** The signed-in person is this player (an adult managing their own account). */
+  self: boolean;
 }
 
 export interface FamilyMe {
   mobile: string;
-  parentName: string | null;
+  /** Whoever manages these players: a parent, a guardian, or an adult player themselves. */
+  holderName: string | null;
   children: FamilyChild[];
 }
 

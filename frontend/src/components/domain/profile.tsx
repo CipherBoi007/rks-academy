@@ -12,7 +12,8 @@ import { LevelChip, StatusChip } from "@/components/ui/Chip";
 import { Pager, usePager } from "@/components/ui/Pager";
 import { EmptyState, ErrorState, Skeleton } from "@/components/ui/States";
 import { cn } from "@/lib/cn";
-import { formatDate, formatMobile, formatPeriod, formatTimeRange, GENDER_LABEL, inr } from "@/lib/format";
+import { contactRole } from "@/lib/contact";
+import { formatDate, formatMobile, formatPeriod, formatTimeRange, genderLabel, inr } from "@/lib/format";
 import type { Payment, PlayerAttendance, PlayerDetail, Progress, Quote } from "@/lib/types";
 
 /** The player profile, shared by the staff app and the family portal; each passes its own data and links. */
@@ -36,7 +37,7 @@ export function ProfileHeader({ player, actions }: { player: PlayerDetail; actio
               <StatusChip status={player.feeStatus} />
             </div>
             <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[15px] text-muted">
-              <span className="font-semibold text-ink">{player.code}</span>· {player.age} yrs · {GENDER_LABEL[player.gender]} ·
+              <span className="font-semibold text-ink">{player.code}</span>· {player.age} yrs · {genderLabel(player.gender, player.age)} ·
               <LevelChip level={player.level} />
               {!player.active && <span className="font-semibold text-alert-700">· Inactive</span>}
             </p>
@@ -76,19 +77,23 @@ export function ProfileInfoCards({ player, siblingHref }: { player: PlayerDetail
         </ul>
       </Card>
       <Card className="p-5 sm:p-6">
-        <CardTitle>Parent</CardTitle>
+        <CardTitle>{player.contact.relation === "SELF" ? "Contact" : contactRole(player.contact.relation)}</CardTitle>
         <ul className="mt-5 divide-y divide-line">
-          <InfoRow icon={<User className={icon} />} label="Guardian" value={player.parent.name} />
+          <InfoRow
+            icon={<User className={icon} />}
+            label="Name"
+            value={player.contact.relation === "SELF" ? `${player.contact.name} (manages their own account)` : player.contact.name}
+          />
           <InfoRow
             icon={<Phone className={icon} />}
             label="Phone"
             value={
-              <a href={`tel:+91${player.parent.mobile}`} className="hover:underline">
-                {formatMobile(player.parent.mobile)}
+              <a href={`tel:+91${player.contact.mobile}`} className="hover:underline">
+                {formatMobile(player.contact.mobile)}
               </a>
             }
           />
-          <InfoRow icon={<Briefcase className={icon} />} label="Occupation" value={player.parent.occupation} />
+          <InfoRow icon={<Briefcase className={icon} />} label="Occupation" value={player.contact.occupation} />
           <InfoRow icon={<CalendarDays className={icon} />} label="Joined RKS" value={formatDate(player.joinDate)} />
         </ul>
         {player.siblings.length > 0 && (

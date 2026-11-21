@@ -15,9 +15,10 @@ test("owner adds a coach login and sees its one-time PIN once", async ({ page })
   await page.goto("/settings");
   await page.getByRole("button", { name: "Add login" }).click();
   const sheet = page.getByRole("dialog", { name: "Add login" });
+  // Every demo coach already has a login, so those are marked and can't be picked again.
+  await expect(sheet.getByRole("option", { name: "S. Divya (has a login)" })).toBeDisabled();
   await sheet.getByLabel("Name").fill("K. Priya");
   await sheet.getByLabel("Mobile number").fill("9333333333");
-  await sheet.getByLabel("Coach profile").selectOption({ label: "S. Divya" });
   await sheet.getByRole("button", { name: "Create login" }).click();
 
   const pin = page.getByRole("dialog", { name: "One-time PIN" });
@@ -81,7 +82,7 @@ test("exports download as Excel-friendly CSV", async ({ page }) => {
   const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("menuitem", { name: "Pending dues" }).click()]);
   expect(download.suggestedFilename()).toBe("rks-dues-2026-11-05.csv");
   const body = (await (await download.createReadStream()).toArray()).join("");
-  expect(body.startsWith("﻿Player ID,Player,Parent")).toBe(true);
+  expect(body.startsWith("﻿Player ID,Player,Contact,Contact is,Contact mobile")).toBe(true);
   expect(body).toContain("Harish Kumar");
 });
 

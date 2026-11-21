@@ -3,7 +3,7 @@ package in.rks.academy.security;
 import in.rks.academy.admin.AdminUser;
 import in.rks.academy.admin.AdminUserRepository;
 import in.rks.academy.family.FamilyPrincipal;
-import in.rks.academy.family.ParentAccountRepository;
+import in.rks.academy.family.FamilyAccountRepository;
 import in.rks.academy.player.PlayerRepository;
 import in.rks.academy.security.JwtService.TokenClaims;
 import jakarta.servlet.FilterChain;
@@ -23,7 +23,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * <ul>
  *   <li>Staff: role, active status and a pending PIN change come from {@code admin_user}. A token from before a
  *       PIN change, PIN reset or deactivation stops working because its session version no longer matches.</li>
- *   <li>Family: the parent must still have at least one active player on file with their mobile number.</li>
+ *   <li>Family: the account must still have at least one active player on file with their mobile number.</li>
  * </ul>
  */
 @Component
@@ -31,14 +31,14 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     /** Granted instead of a role while a forced PIN change is pending, so only the PIN-change endpoints work. */
     public static final String PIN_CHANGE_AUTHORITY = "PIN_CHANGE_REQUIRED";
-    public static final String FAMILY_ROLE = "ROLE_PARENT";
+    public static final String FAMILY_ROLE = "ROLE_FAMILY";
 
     private final JwtService jwtService;
     private final AdminUserRepository users;
-    private final ParentAccountRepository parents;
+    private final FamilyAccountRepository parents;
     private final PlayerRepository players;
 
-    public JwtAuthFilter(JwtService jwtService, AdminUserRepository users, ParentAccountRepository parents,
+    public JwtAuthFilter(JwtService jwtService, AdminUserRepository users, FamilyAccountRepository parents,
                          PlayerRepository players) {
         this.jwtService = jwtService;
         this.users = users;
@@ -76,7 +76,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private void authenticateFamily(TokenClaims claims) {
         parents.findById(claims.subjectId())
                 .filter(p -> p.getTokenVersion() == claims.tokenVersion())
-                .filter(p -> players.existsByParentMobileAndActiveTrue(p.getMobile()))
+                .filter(p -> players.existsByContactMobileAndActiveTrue(p.getMobile()))
                 .ifPresent(p -> setAuthentication(new FamilyPrincipal(p.getId(), p.getMobile()), FAMILY_ROLE));
     }
 

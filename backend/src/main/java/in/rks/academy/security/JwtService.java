@@ -2,7 +2,7 @@ package in.rks.academy.security;
 
 import in.rks.academy.admin.AdminUser;
 import in.rks.academy.config.AppProperties;
-import in.rks.academy.family.ParentAccount;
+import in.rks.academy.family.FamilyAccount;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
@@ -23,7 +23,7 @@ public class JwtService {
 
     /**
      * What a valid token proves: who it was issued to, for which session generation, and whether the subject is a
-     * staff user or a family (parent) account. The two kinds never grant each other's access.
+     * staff user or a family account. The two kinds never grant each other's access.
      */
     public record TokenClaims(long subjectId, int tokenVersion, boolean family) {
     }
@@ -41,7 +41,7 @@ public class JwtService {
         this.familyTtl = props.jwt().familyTtl() != null ? props.jwt().familyTtl() : Duration.ofDays(30);
     }
 
-    public IssuedToken issueFamily(ParentAccount account) {
+    public IssuedToken issueFamily(FamilyAccount account) {
         Instant now = Instant.now();
         Instant expiry = now.plus(familyTtl);
         String token = Jwts.builder()

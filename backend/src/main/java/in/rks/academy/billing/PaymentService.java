@@ -177,7 +177,7 @@ public class PaymentService {
         Player pl = p.getPlayer();
         AppProperties.Academy academy = props.academy();
         return new ReceiptDto(p.getReceiptNo(), p.getPaidOn(), academy.name(), academy.address(), academy.phone(),
-                pl.getCode(), pl.getName(), pl.getParentName(), pl.getBatch().getName(), p.getPlan().getName(),
+                pl.getCode(), pl.getName(), pl.getContactName(), pl.getBatch().getName(), p.getPlan().getName(),
                 p.getPeriodFrom(), p.getPeriodTo(), lines, p.getAmount(), IndianRupeeWords.of(p.getAmount()),
                 p.getMode(), p.getRecordedBy() == null ? null : p.getRecordedBy().getName(), p.getNote(),
                 p.isVoided(), p.getVoidedAt(), p.getVoidReason());

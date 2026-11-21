@@ -89,7 +89,15 @@ export const LEVEL_LABEL: Record<Level, string> = {
 
 export const LEVELS: Level[] = ["BEGINNER", "INTERMEDIATE", "ADVANCED", "TOURNAMENT"];
 
-export const GENDER_LABEL: Record<Gender, string> = { MALE: "Boy", FEMALE: "Girl", OTHER: "Other" };
+/** For forms: fits every age. */
+export const GENDER_LABEL: Record<Gender, string> = { MALE: "Male", FEMALE: "Female", OTHER: "Other" };
+
+/** For profiles: "Boy" / "Girl" for children, "Man" / "Woman" for adults (18+). */
+export function genderLabel(gender: Gender, age: number): string {
+  if (gender === "OTHER") return "Other";
+  const adult = age >= 18;
+  return gender === "MALE" ? (adult ? "Man" : "Boy") : adult ? "Woman" : "Girl";
+}
 
 export const CATEGORY_LABEL: Record<ProductCategory, string> = {
   RACKETS: "Rackets",

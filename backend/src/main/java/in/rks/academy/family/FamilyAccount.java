@@ -9,27 +9,27 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * A parent's sign-in to the family portal, created when the owner first issues them a PIN. Their children are the
- * active players with this mobile number.
+ * A family-app sign-in, created when the owner first issues a PIN. It belongs to a mobile number: its players are
+ * the active players with that contact number, whether a parent's children, an adult player, or both.
  */
 @Getter
 @Setter
 @Entity
-@Table(name = "parent_account")
-public class ParentAccount extends BaseEntity {
+@Table(name = "family_account")
+public class FamilyAccount extends BaseEntity {
 
     @Column(nullable = false, unique = true)
     private String mobile;
 
-    /** Bumped to sign the parent out on every device. */
-    /** bcrypt hash of the parent's PIN; null until the owner issues one. */
+    /** bcrypt hash of the PIN; null until the owner issues one. */
     @Column(name = "pin_hash")
     private String pinHash;
 
-    /** True while the PIN is a one-time PIN from the owner; it opens nothing until the parent replaces it. */
+    /** True while the PIN is a one-time PIN from the owner; it opens nothing until it is replaced. */
     @Column(name = "must_change_pin", nullable = false)
     private boolean mustChangePin = true;
 
+    /** Bumped to sign the account out on every device. */
     @Column(name = "token_version", nullable = false)
     private int tokenVersion;
 

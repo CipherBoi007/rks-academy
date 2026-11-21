@@ -78,8 +78,8 @@ export function ReceiptView({
               </dd>
             </div>
             <div>
-              <dt className="text-sm text-muted">Parent / guardian</dt>
-              <dd className="font-semibold">{r.parentName}</dd>
+              <dt className="text-sm text-muted">Received from</dt>
+              <dd className="font-semibold">{r.receivedFrom}</dd>
             </div>
             <div>
               <dt className="text-sm text-muted">Batch</dt>

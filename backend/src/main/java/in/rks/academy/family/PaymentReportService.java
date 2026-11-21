@@ -35,7 +35,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Fees in the family app. The parent pays the academy's UPI ID from their own UPI app (the money never passes
+ * Fees in the family app. The family pays the academy's UPI ID from their own UPI app (the money never passes
  * through this system), then reports the payment with its UPI reference. The owner checks the bank and confirms
  * the report, which records an ordinary UPI payment and receipt for each child, or rejects it with a reason.
  */
@@ -43,14 +43,14 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class PaymentReportService {
 
-    /** How far back a payment may be reported, and how long decided reports stay on the parent's page. */
+    /** How far back a payment may be reported, and how long decided reports stay on the family's page. */
     private static final int MAX_AGE_DAYS = 60;
     private static final int SHOW_DECIDED_DAYS = 30;
     private static final DateTimeFormatter MONTH = DateTimeFormatter.ofPattern("MMM yyyy", Locale.ENGLISH);
 
     /**
      * {@code amount} is normally left out: the family app's UPI link fixes it, so the report takes the fees due on
-     * the day the parent paid (no late fee if they paid in time, even when they report it later).
+     * the day of payment (no late fee if they paid in time, even when they report it later).
      */
     public record ReportRequest(
             @NotBlank @Size(max = 40) String utr,
@@ -65,10 +65,10 @@ public class PaymentReportService {
     public record ReportItemDto(PlayerRef player, LocalDate periodFrom, BigDecimal amount, String receiptNo) {
     }
 
-    /** For parents {@code utr} shows only its last 4 characters, and the parent fields are left out. */
+    /** For families {@code utr} shows only its last 4 characters, and the holder fields are left out. */
     public record ReportDto(long id, String utr, BigDecimal amount, LocalDate paidOn, PaymentReport.Status status,
                             OffsetDateTime reportedAt, String reviewedBy, OffsetDateTime reviewedAt,
-                            String rejectReason, String parentName, String parentMobile, BigDecimal feesTotal,
+                            String rejectReason, String holderName, String holderMobile, BigDecimal feesTotal,
                             List<ReportItemDto> items) {
     }
 
@@ -76,7 +76,7 @@ public class PaymentReportService {
     public record FeeChild(PlayerRef player, QuoteDto due, LocalDate payBy, boolean reported) {
     }
 
-    /** {@code upiId} is null when the academy hasn't set one: parents then pay at the desk. */
+    /** {@code upiId} is null when the academy hasn't set one: families then pay at the desk. */
     public record PayTo(String upiId, String payee, String phone) {
     }
 
@@ -86,7 +86,7 @@ public class PaymentReportService {
     }
 
     private final PaymentReportRepository reports;
-    private final ParentAccountRepository accounts;
+    private final FamilyAccountRepository accounts;
     private final PlayerRepository players;
     private final PaymentRepository paymentRows;
     private final PaymentService payments;
@@ -96,7 +96,7 @@ public class PaymentReportService {
     private final AppProperties props;
     private final Clock clock;
 
-    public PaymentReportService(PaymentReportRepository reports, ParentAccountRepository accounts,
+    public PaymentReportService(PaymentReportRepository reports, FamilyAccountRepository accounts,
                                 PlayerRepository players, PaymentRepository paymentRows, PaymentService payments,
                                 BillingService billing, FamilyService family, AdminUserRepository users,
                                 AppProperties props, Clock clock) {
@@ -112,12 +112,12 @@ public class PaymentReportService {
         this.clock = clock;
     }
 
-    // ---- The parent's side ----------------------------------------------------------------------------------
+    // ---- The family's side ----------------------------------------------------------------------------------
 
-    /** Everything the family Fees page shows, for all of the parent's children at once. */
+    /** Everything the family Fees page shows, for all of the account's players at once. */
     public Fees fees() {
         FamilyPrincipal me = FamilyService.current();
-        List<Player> children = players.findByParentMobileAndActiveTrueOrderByJoinDateAsc(me.mobile());
+        List<Player> children = players.findByContactMobileAndActiveTrueOrderByJoinDateAsc(me.mobile());
         Map<Long, BillingService.FeeState> states = billing.feeStates(children);
         Set<Long> reported = new HashSet<>(reports.playersInPendingReports(ids(children)));
 
@@ -131,7 +131,7 @@ public class PaymentReportService {
         BigDecimal toReport = sum(rows.stream().filter(r -> r.due() != null && !r.reported())
                 .map(r -> r.due().total()).toList());
 
-        List<ReportDto> recent = reports.findRecentForParent(me.accountId(), now().minusDays(SHOW_DECIDED_DAYS))
+        List<ReportDto> recent = reports.findRecentForAccount(me.accountId(), now().minusDays(SHOW_DECIDED_DAYS))
                 .stream()
                 .sorted(Comparator.comparing(PaymentReport::getCreatedAt).reversed())
                 .limit(5)
@@ -167,12 +167,12 @@ public class PaymentReportService {
                     "Payments older than " + MAX_AGE_DAYS + " days can't be reported here. Please contact the academy.");
         }
 
-        ParentAccount parent = accounts.lockById(me.accountId())
+        FamilyAccount account = accounts.lockById(me.accountId())
                 .orElseThrow(() -> ApiException.notFound("Family", "session"));
         if (reports.existsByUtrAndStatusNot(utr, PaymentReport.Status.REJECTED)) {
             throw ApiException.conflict("UTR_ALREADY_REPORTED", "This UPI reference number has already been reported");
         }
-        List<Player> children = players.findByParentMobileAndActiveTrueOrderByJoinDateAsc(me.mobile());
+        List<Player> children = players.findByContactMobileAndActiveTrueOrderByJoinDateAsc(me.mobile());
         Map<Long, BillingService.FeeState> states = billing.feeStates(children);
         Set<Long> waiting = new HashSet<>(reports.playersInPendingReports(ids(children)));
         List<Player> unpaid = children.stream()
@@ -185,11 +185,11 @@ public class PaymentReportService {
         }
 
         PaymentReport report = new PaymentReport();
-        report.setParent(parent);
+        report.setAccount(account);
         report.setUtr(utr);
         report.setPaidOn(req.paidOn());
         for (Player p : unpaid) {
-            // Quoted for the day the parent paid, so a late fee is charged only if they paid late.
+            // Quoted for the day of payment, so a late fee is charged only if they paid late.
             QuoteDto quote = payments.quote(p.getId(), req.paidOn());
             PaymentReportItem item = new PaymentReportItem();
             item.setPlayer(p);
@@ -218,8 +218,8 @@ public class PaymentReportService {
     }
 
     /**
-     * Confirms a report: records each child's fee as a UPI payment dated the day the parent paid, with a receipt.
-     * If the parent paid a different total, the difference goes on the last child's receipt as an adjustment.
+     * Confirms a report: records each player's fee as a UPI payment dated the day of payment, with a receipt.
+     * If a different total was paid, the difference goes on the last player's receipt as an adjustment.
      * Refused when any of those fees has been collected meanwhile, so nothing is ever recorded twice.
      */
     @Transactional
@@ -228,7 +228,7 @@ public class PaymentReportService {
         List<PaymentReportItem> items = report.getItems();
         BigDecimal difference = report.getAmount()
                 .subtract(sum(items.stream().map(PaymentReportItem::getAmount).toList()));
-        String note = "UPI ref " + report.getUtr() + ", reported by the parent";
+        String note = "UPI ref " + report.getUtr() + ", reported in the family app";
         for (int i = 0; i < items.size(); i++) {
             PaymentReportItem item = items.get(i);
             Player p = item.getPlayer();
@@ -289,10 +289,10 @@ public class PaymentReportService {
                         i.getPayment() == null ? null : i.getPayment().getReceiptNo()))
                 .toList();
         String utr = forOwner ? r.getUtr() : r.getUtr().substring(r.getUtr().length() - 4);
-        String parentName = forOwner && !r.getItems().isEmpty() ? r.getItems().get(0).getPlayer().getParentName() : null;
+        String holderName = forOwner && !r.getItems().isEmpty() ? r.getItems().get(0).getPlayer().getContactName() : null;
         return new ReportDto(r.getId(), utr, r.getAmount(), r.getPaidOn(), r.getStatus(), r.getCreatedAt(),
                 r.getReviewedBy() == null ? null : r.getReviewedBy().getName(), r.getReviewedAt(),
-                r.getRejectReason(), parentName, forOwner ? r.getParent().getMobile() : null,
+                r.getRejectReason(), holderName, forOwner ? r.getAccount().getMobile() : null,
                 sum(r.getItems().stream().map(PaymentReportItem::getAmount).toList()), items);
     }
 

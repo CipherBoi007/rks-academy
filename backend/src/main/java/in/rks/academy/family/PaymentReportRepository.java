@@ -17,20 +17,20 @@ public interface PaymentReportRepository extends JpaRepository<PaymentReport, Lo
     Optional<PaymentReport> lockById(Long id);
 
     /** The owner's list: waiting reports first (oldest first), then decisions since {@code since}, newest first. */
-    @EntityGraph(attributePaths = {"parent", "reviewedBy", "items", "items.player"})
+    @EntityGraph(attributePaths = {"account", "reviewedBy", "items", "items.player"})
     @Query("""
             select distinct r from PaymentReport r
             where r.status = in.rks.academy.family.PaymentReport.Status.PENDING or r.reviewedAt >= :since
             """)
     List<PaymentReport> findForReview(OffsetDateTime since);
 
-    /** A parent's waiting reports plus the ones decided since {@code since}. */
+    /** An account's waiting reports plus the ones decided since {@code since}. */
     @EntityGraph(attributePaths = {"items", "items.player"})
     @Query("""
             select distinct r from PaymentReport r
-            where r.parent.id = :parentId and (r.status = in.rks.academy.family.PaymentReport.Status.PENDING or r.reviewedAt >= :since)
+            where r.account.id = :accountId and (r.status = in.rks.academy.family.PaymentReport.Status.PENDING or r.reviewedAt >= :since)
             """)
-    List<PaymentReport> findRecentForParent(long parentId, OffsetDateTime since);
+    List<PaymentReport> findRecentForAccount(long accountId, OffsetDateTime since);
 
     /** Players already covered by a waiting report, so a second report can't claim the same fees. */
     @Query("""

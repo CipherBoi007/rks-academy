@@ -53,17 +53,23 @@ public class ExportService {
     }
 
     public byte[] dues() {
-        Csv csv = new Csv().row("Player ID", "Player", "Parent", "Parent mobile", "Batch", "Plan", "Period from",
+        Csv csv = new Csv().row("Player ID", "Player", "Contact", "Contact is", "Contact mobile", "Batch", "Plan", "Period from",
                 "Period to", "Days overdue", "Plan amount", "Sibling discount", "Late fee", "Registration fee",
                 "Amount due");
         for (BillingService.Due d : billing.dues()) {
             Player p = d.player();
             FeeQuote q = d.quote();
-            csv.row(p.getCode(), p.getName(), p.getParentName(), p.getParentMobile(), p.getBatch().getName(),
+            csv.row(p.getCode(), p.getName(), p.getContactName(), relation(p), p.getContactMobile(), p.getBatch().getName(),
                     p.getFeePlan().getName(), q.period().from(), q.period().to(), d.daysOverdue(), q.planAmount(),
                     q.siblingDiscount(), q.lateFee(), q.registrationFee(), q.total());
         }
         return csv.bytes();
+    }
+
+    /** "Self", "Parent" or "Guardian". */
+    private static String relation(Player p) {
+        String r = p.getContactRelation().name();
+        return r.charAt(0) + r.substring(1).toLowerCase(java.util.Locale.ROOT);
     }
 
     public byte[] players() {
@@ -71,11 +77,11 @@ public class ExportService {
         Map<Long, BillingService.FeeState> states = billing.feeStates(list);
         LocalDate today = billing.today();
         Csv csv = new Csv().row("Player ID", "Name", "Date of birth", "Age", "Gender", "Level", "Batch", "Court",
-                "Plan", "Fee status", "Parent", "Parent mobile", "School", "Joined");
+                "Plan", "Fee status", "Contact", "Contact is", "Contact mobile", "School", "Joined");
         for (Player p : list) {
             csv.row(p.getCode(), p.getName(), p.getDob(), p.ageOn(today), p.getGender(), p.getLevel(),
                     p.getBatch().getName(), p.getBatch().getCourt().getName(), p.getFeePlan().getName(),
-                    states.get(p.getId()).due() ? "DUE" : "PAID", p.getParentName(), p.getParentMobile(),
+                    states.get(p.getId()).due() ? "DUE" : "PAID", p.getContactName(), relation(p), p.getContactMobile(),
                     p.getSchool(), p.getJoinDate());
         }
         return csv.bytes();

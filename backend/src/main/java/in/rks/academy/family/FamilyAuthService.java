@@ -17,9 +17,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Parents sign in with the mobile number the academy has on file and a PIN, like staff. Nothing is sent, so
- * sign-in costs nothing however often the form is used. The owner issues a one-time PIN from the player's
- * profile; it opens nothing until the parent replaces it with their own. Five wrong PINs in a row lock the
+ * Families sign in with the contact mobile number the academy has on file and a PIN, like staff: a parent or
+ * guardian for children, or adult players themselves. Nothing is sent, so sign-in costs nothing however often the
+ * form is used. The owner issues a one-time PIN from the player's profile; it opens nothing until it is replaced. Five wrong PINs in a row lock the
  * number for 5 minutes, and a wrong number or PIN gets the same answer, so the form can't reveal who is a member.
  */
 @Service
@@ -29,25 +29,25 @@ public class FamilyAuthService {
     public record FamilySession(String token, Instant expiresAt, boolean mustChangePin) {
     }
 
-    /** What the owner sees on a player's profile about their parent's sign-in. */
-    public record ParentLogin(String mobile, String parentName, boolean hasPin, boolean mustChangePin,
-                              OffsetDateTime lastLoginAt) {
+    /** What the owner sees on a player's profile about the family-app sign-in for their contact number. */
+    public record FamilyLogin(String mobile, String holderName, Player.ContactRelation relation, boolean hasPin,
+                              boolean mustChangePin, OffsetDateTime lastLoginAt) {
     }
 
-    public record IssuedParentPin(ParentLogin login, String temporaryPin) {
+    public record IssuedFamilyPin(FamilyLogin login, String temporaryPin) {
     }
 
     private static final ApiException BAD_CREDENTIALS =
             new ApiException(HttpStatus.UNAUTHORIZED, "INVALID_CREDENTIALS", "Mobile number or PIN is incorrect");
 
-    private final ParentAccountRepository accounts;
+    private final FamilyAccountRepository accounts;
     private final PlayerRepository players;
     private final PasswordEncoder encoder;
     private final LoginAttemptLimiter limiter;
     private final JwtService jwt;
     private final Clock clock;
 
-    public FamilyAuthService(ParentAccountRepository accounts, PlayerRepository players, PasswordEncoder encoder,
+    public FamilyAuthService(FamilyAccountRepository accounts, PlayerRepository players, PasswordEncoder encoder,
                              LoginAttemptLimiter limiter, JwtService jwt, Clock clock) {
         this.accounts = accounts;
         this.players = players;
@@ -59,7 +59,7 @@ public class FamilyAuthService {
 
     @Transactional
     public FamilySession login(String mobile, String pin) {
-        ParentAccount account = check(mobile, pin);
+        FamilyAccount account = check(mobile, pin);
         return account.isMustChangePin() ? new FamilySession(null, null, true) : session(account);
     }
 
@@ -69,7 +69,7 @@ public class FamilyAuthService {
      */
     @Transactional
     public FamilySession setPin(String mobile, String currentPin, String newPin) {
-        ParentAccount account = check(mobile, currentPin);
+        FamilyAccount account = check(mobile, currentPin);
         if (currentPin.equals(newPin)) {
             throw ApiException.rule("PIN_UNCHANGED", "Choose a PIN different from the current one");
         }
@@ -91,25 +91,25 @@ public class FamilyAuthService {
     // ---- For the owner, from a player's profile ----------------------------------------------------------------
 
     @Transactional(readOnly = true)
-    public ParentLogin parentLogin(long playerId) {
+    public FamilyLogin familyLogin(long playerId) {
         Player player = player(playerId);
-        return describe(player, accounts.findByMobile(player.getParentMobile()).orElse(null));
+        return describe(player, accounts.findByMobile(player.getContactMobile()).orElse(null));
     }
 
     /**
-     * Issues a one-time PIN for the player's parent, shown once to the owner to pass on. It replaces any PIN the
-     * parent had (so it also serves as "forgot PIN") and signs them out everywhere. Brothers and sisters share it,
-     * because sign-in is per parent mobile number.
+     * Issues a one-time PIN for the player's contact number, shown once to the owner to pass on. It replaces any
+     * PIN the account had (so it also serves as "forgot PIN") and signs it out everywhere. Everyone on that number
+     * shares it (brothers and sisters, or a parent who also plays), because sign-in is per mobile number.
      */
     @Transactional
-    public IssuedParentPin issuePin(long playerId) {
+    public IssuedFamilyPin issuePin(long playerId) {
         Player player = player(playerId);
         if (!player.isActive()) {
-            throw ApiException.rule("PLAYER_INACTIVE", "This player has left, so their parent can't sign in");
+            throw ApiException.rule("PLAYER_INACTIVE", "This player has left, so their family-app sign-in is closed");
         }
-        ParentAccount account = accounts.findByMobile(player.getParentMobile()).orElseGet(() -> {
-            ParentAccount a = new ParentAccount();
-            a.setMobile(player.getParentMobile());
+        FamilyAccount account = accounts.findByMobile(player.getContactMobile()).orElseGet(() -> {
+            FamilyAccount a = new FamilyAccount();
+            a.setMobile(player.getContactMobile());
             return a;
         });
         String pin = TemporaryPin.generate();
@@ -117,18 +117,18 @@ public class FamilyAuthService {
         account.setMustChangePin(true);
         account.setTokenVersion(account.getTokenVersion() + 1);
         account = accounts.save(account);
-        limiter.recordSuccess(limitKey(account.getMobile())); // a locked-out parent can try the new PIN at once
-        return new IssuedParentPin(describe(player, account), pin);
+        limiter.recordSuccess(limitKey(account.getMobile())); // a locked-out account can try the new PIN at once
+        return new IssuedFamilyPin(describe(player, account), pin);
     }
 
-    private ParentAccount check(String mobile, String pin) {
+    private FamilyAccount check(String mobile, String pin) {
         String key = limitKey(mobile);
         if (limiter.isLocked(key)) {
             throw new ApiException(HttpStatus.TOO_MANY_REQUESTS, "LOCKED", "Too many wrong PINs. Try again in 5 minutes.");
         }
-        ParentAccount account = accounts.findByMobile(mobile).filter(a -> a.getPinHash() != null).orElse(null);
+        FamilyAccount account = accounts.findByMobile(mobile).filter(a -> a.getPinHash() != null).orElse(null);
         if (account == null || !encoder.matches(pin, account.getPinHash())
-                || !players.existsByParentMobileAndActiveTrue(mobile)) {
+                || !players.existsByContactMobileAndActiveTrue(mobile)) {
             limiter.recordFailure(key);
             throw BAD_CREDENTIALS;
         }
@@ -136,7 +136,7 @@ public class FamilyAuthService {
         return account;
     }
 
-    private FamilySession session(ParentAccount account) {
+    private FamilySession session(FamilyAccount account) {
         account.setLastLoginAt(OffsetDateTime.ofInstant(clock.instant(), ZoneOffset.UTC));
         JwtService.IssuedToken token = jwt.issueFamily(accounts.save(account));
         return new FamilySession(token.token(), token.expiresAt(), false);
@@ -146,13 +146,13 @@ public class FamilyAuthService {
         return players.findById(id).orElseThrow(() -> ApiException.notFound("Player", id));
     }
 
-    private static ParentLogin describe(Player player, ParentAccount account) {
+    private static FamilyLogin describe(Player player, FamilyAccount account) {
         boolean hasPin = account != null && account.getPinHash() != null;
-        return new ParentLogin(player.getParentMobile(), player.getParentName(), hasPin,
+        return new FamilyLogin(player.getContactMobile(), player.getContactName(), player.getContactRelation(), hasPin,
                 hasPin && account.isMustChangePin(), account == null ? null : account.getLastLoginAt());
     }
 
-    /** Parents and staff can share a mobile number, so their lockouts are kept apart. */
+    /** Family accounts and staff can share a mobile number, so their lockouts are kept apart. */
     private static String limitKey(String mobile) {
         return "family:" + mobile;
     }

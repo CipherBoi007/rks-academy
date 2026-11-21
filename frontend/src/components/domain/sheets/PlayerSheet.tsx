@@ -10,14 +10,16 @@ import { Camera, Trash2 } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Field, Input, Select, fieldLabel } from "@/components/ui/Field";
+import { PillGroup } from "@/components/ui/Pills";
 import { Sheet } from "@/components/ui/Sheet";
 import { useToast } from "@/components/ui/Toast";
 import { api, errorMessage } from "@/lib/api";
 import { prepareImage } from "@/lib/images";
 import { MOBILE, applyServerErrors, blankToUndefined, cleaned } from "@/lib/forms";
+import { ADULT_AGE, contactRole, isAdult } from "@/lib/contact";
 import { GENDER_LABEL, LEVEL_LABEL, LEVELS } from "@/lib/format";
 import { keys, useAllPlayers, useBatches, useConfig, usePlans } from "@/lib/queries";
-import type { Gender, Level, PlayerDetail, PlayerInput } from "@/lib/types";
+import type { ContactRelation, Gender, Level, PlayerDetail, PlayerInput } from "@/lib/types";
 
 const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 
@@ -29,9 +31,10 @@ const schema = z.object({
   batchId: z.string().min(1, "Pick a batch").transform(Number),
   feePlanId: z.string().min(1, "Pick a fee plan").transform(Number),
   joinDate: z.string().optional(),
-  parentName: z.string().trim().min(2, "Enter the parent or guardian's name").max(100),
-  parentMobile: z.string().trim().regex(/^\d{10}$/, "Enter a 10-digit mobile number"),
-  parentOccupation: z.string().trim().max(80).optional(),
+  contactRelation: z.enum(["SELF", "PARENT", "GUARDIAN"]),
+  contactName: z.string().trim().max(100).optional(),
+  contactMobile: z.string().trim().regex(/^\d{10}$/, "Enter a 10-digit mobile number"),
+  contactOccupation: z.string().trim().max(80).optional(),
   bloodGroup: z.string().optional(),
   school: z.string().trim().max(120).optional(),
   address: z.string().trim().max(200).optional(),
@@ -39,11 +42,29 @@ const schema = z.object({
     .string()
     .optional()
     .transform((v) => (v ? Number(v) : undefined)),
+}).superRefine((v, ctx) => {
+  // An adult is their own contact; anyone else needs the parent's or guardian's name.
+  if (v.contactRelation !== "SELF" && (v.contactName ?? "").length < 2) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["contactName"],
+      message: `Enter the ${v.contactRelation === "PARENT" ? "parent" : "guardian"}'s name`,
+    });
+  }
 });
 
 type Values = z.input<typeof schema>;
 type Parsed = z.output<typeof schema>;
-const FIELDS = Object.keys(schema.shape);
+const FIELDS = [
+  "name", "dob", "gender", "level", "batchId", "feePlanId", "joinDate", "contactRelation", "contactName",
+  "contactMobile", "contactOccupation", "bloodGroup", "school", "address", "siblingOfPlayerId",
+];
+
+const RELATIONS: { value: ContactRelation; label: string }[] = [
+  { value: "PARENT", label: "Parent" },
+  { value: "GUARDIAN", label: "Guardian" },
+  { value: "SELF", label: "The player" },
+];
 
 function defaults(player?: PlayerDetail, today?: string): Values {
   return {
@@ -54,9 +75,10 @@ function defaults(player?: PlayerDetail, today?: string): Values {
     batchId: player ? String(player.batch.id) : "",
     feePlanId: player ? String(player.plan.id) : "",
     joinDate: player?.joinDate ?? today ?? "",
-    parentName: player?.parent.name ?? "",
-    parentMobile: player?.parent.mobile ?? "",
-    parentOccupation: player?.parent.occupation ?? "",
+    contactRelation: player?.contact.relation ?? "PARENT",
+    contactName: player && player.contact.relation !== "SELF" ? player.contact.name : "",
+    contactMobile: player?.contact.mobile ?? "",
+    contactOccupation: player?.contact.occupation ?? "",
     bloodGroup: player?.bloodGroup ?? "",
     school: player?.school ?? "",
     address: player?.address ?? "",
@@ -83,8 +105,21 @@ export function PlayerSheet({ open, onClose, player }: { open: boolean; onClose:
     handleSubmit,
     reset,
     setError,
-    formState: { errors },
+    setValue,
+    watch,
+    formState: { errors, dirtyFields },
   } = form;
+
+  // "The player" is offered only for adults. A new adult defaults to managing their own account, and a date of
+  // birth that makes the player a minor moves the account back to a parent.
+  const dob = watch("dob");
+  const relation = watch("contactRelation");
+  const adult = isAdult(dob, config?.today ?? "");
+  const relationTouched = Boolean(dirtyFields.contactRelation);
+  useEffect(() => {
+    if (!adult && relation === "SELF") setValue("contactRelation", "PARENT");
+    else if (adult && !editing && !relationTouched && relation !== "SELF") setValue("contactRelation", "SELF");
+  }, [adult, relation, editing, relationTouched, setValue]);
 
   useEffect(() => {
     if (open) {
@@ -96,7 +131,10 @@ export function PlayerSheet({ open, onClose, player }: { open: boolean; onClose:
 
   const save = useMutation({
     mutationFn: async (values: Parsed) => {
-      const body = blankToUndefined({ ...values }) as unknown as PlayerInput;
+      const body = blankToUndefined({
+        ...values,
+        contactName: values.contactRelation === "SELF" ? undefined : values.contactName,
+      }) as unknown as PlayerInput;
       const saved = player
         ? await api<PlayerDetail>(`/players/${player.id}`, { method: "PUT", body })
         : await api<PlayerDetail>("/players", { method: "POST", body });
@@ -252,26 +290,43 @@ export function PlayerSheet({ open, onClose, player }: { open: boolean; onClose:
           <Input id="joinDate" type="date" {...register("joinDate")} />
         </Field>
 
-        <p className={`${fieldLabel} border-t border-line pt-5`}>Parent / guardian</p>
-        <Field id="parentName" label="Name" error={errors.parentName?.message}>
-          <Input id="parentName" invalid={Boolean(errors.parentName)} {...register("parentName")} />
-        </Field>
+        <div className="space-y-2 border-t border-line pt-5">
+          <p className={fieldLabel}>Who manages this account?</p>
+          <PillGroup<ContactRelation>
+            label="Who manages this account?"
+            value={relation}
+            onChange={(v) => setValue("contactRelation", v, { shouldDirty: true })}
+            options={adult ? RELATIONS : RELATIONS.filter((r) => r.value !== "SELF")}
+          />
+          <p className="text-sm text-muted">
+            {relation === "SELF"
+              ? "The player gets the fee reminders and signs in to the family app with their own number."
+              : adult
+                ? "Pick \u201cThe player\u201d if they handle their own fees."
+                : `Players under ${ADULT_AGE} need a parent or guardian, who gets the fee reminders and the family app sign-in.`}
+          </p>
+        </div>
+        {relation !== "SELF" && (
+          <Field id="contactName" label={`${contactRole(relation)}'s name`} error={errors.contactName?.message}>
+            <Input id="contactName" invalid={Boolean(errors.contactName)} {...register("contactName")} />
+          </Field>
+        )}
         <div className="grid grid-cols-2 gap-3">
-          <Field id="parentMobile" label="Mobile" error={errors.parentMobile?.message}>
+          <Field id="contactMobile" label={relation === "SELF" ? "Player's mobile" : "Mobile"} error={errors.contactMobile?.message}>
             <Input
-              id="parentMobile"
+              id="contactMobile"
               type="tel"
               inputMode="numeric"
               placeholder="10 digits"
-              invalid={Boolean(errors.parentMobile)}
-              {...cleaned(register("parentMobile"), MOBILE)}
+              invalid={Boolean(errors.contactMobile)}
+              {...cleaned(register("contactMobile"), MOBILE)}
             />
           </Field>
-          <Field id="parentOccupation" label="Occupation">
-            <Input id="parentOccupation" {...register("parentOccupation")} />
+          <Field id="contactOccupation" label="Occupation">
+            <Input id="contactOccupation" {...register("contactOccupation")} />
           </Field>
         </div>
-        <Field id="school" label="School">
+        <Field id="school" label={adult ? "School / college" : "School"}>
           <Input id="school" {...register("school")} />
         </Field>
         <Field id="address" label="Address">

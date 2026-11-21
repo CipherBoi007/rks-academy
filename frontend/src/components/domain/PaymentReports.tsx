@@ -21,9 +21,9 @@ import type { PaymentReport } from "@/lib/types";
 const AFFECTED = [keys.paymentReports, keys.payments, keys.dues, keys.summary, keys.players, keys.reminders, ["quote"]];
 
 /**
- * The Fees page's Requests tab: UPI payments parents reported from the family app. The owner checks each
- * reference in the bank app, then confirms (receipts are issued, dated the day the parent paid) or rejects with
- * a reason the parent sees. Decided requests stay listed for 30 days.
+ * The Fees page's Requests tab: UPI payments families reported from the family app. The owner checks each
+ * reference in the bank app, then confirms (receipts are issued, dated the day of payment) or rejects with
+ * a reason the family sees. Decided requests stay listed for 30 days.
  */
 export function PaymentReportsPanel() {
   const reports = usePaymentReports();
@@ -43,7 +43,7 @@ export function PaymentReportsPanel() {
       <Card>
         <EmptyState
           title="No payment requests"
-          message="When a parent pays by UPI in the family app and reports it, it appears here for you to confirm."
+          message="When a family pays by UPI in the family app and reports it, it appears here for you to confirm."
         />
       </Card>
     );
@@ -56,7 +56,7 @@ export function PaymentReportsPanel() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="font-semibold">
-            Payment requests from parents{waiting.length > 0 && <span className="ml-2 rounded-full bg-primary px-2 py-0.5 text-xs text-white">{waiting.length} to check</span>}
+            Payment requests{waiting.length > 0 && <span className="ml-2 rounded-full bg-primary px-2 py-0.5 text-xs text-white">{waiting.length} to check</span>}
           </p>
           <p className="text-sm text-muted">
             {waiting.length > 0
@@ -115,8 +115,8 @@ function ReportRow({ report: r, onReject }: { report: PaymentReport; onReject?: 
           <span className="select-all font-mono tracking-wide">{r.utr}</span>
         </p>
         <p className="text-sm text-muted">
-          {r.parentName ?? "Parent"}
-          {r.parentMobile && ` · ${formatMobile(r.parentMobile)}`} · paid {formatDate(r.paidOn)}
+          {r.holderName ?? "Family"}
+          {r.holderMobile && ` · ${formatMobile(r.holderMobile)}`} · paid {formatDate(r.paidOn)}
         </p>
         <ul className="text-sm">
           {r.items.map((i) => (
@@ -180,7 +180,7 @@ function RejectSheet({ report, onClose }: { report: PaymentReport | null; onClos
     mutationFn: () => api<PaymentReport>(`/payment-reports/${report!.id}/reject`, { method: "POST", body: { reason: reason.trim() } }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: keys.paymentReports });
-      toast({ title: "Payment report rejected", description: "The parent sees your reason and can report it again." });
+      toast({ title: "Payment report rejected", description: "They see your reason in the family app and can report it again." });
       onClose();
     },
     onError: (e) => toast({ tone: "error", title: "Couldn't reject the report", description: errorMessage(e) }),
@@ -206,10 +206,10 @@ function RejectSheet({ report, onClose }: { report: PaymentReport | null; onClos
     >
       <form id="reject-report-form" noValidate onSubmit={submit} className="space-y-5">
         <p className="text-[15px] text-muted">
-          Nothing is recorded and the fees stay due. The parent sees this reason in the family app and can report the
-          payment again.
+          Nothing is recorded and the fees stay due. They see this reason in the family app and can report the payment
+          again.
         </p>
-        <Field id="reject-reason" label="Reason for the parent" error={submitted && !valid ? "Say why, in a few words" : undefined}>
+        <Field id="reject-reason" label="Reason (shown in the family app)" error={submitted && !valid ? "Say why, in a few words" : undefined}>
           <Textarea
             id="reject-reason"
             maxLength={200}

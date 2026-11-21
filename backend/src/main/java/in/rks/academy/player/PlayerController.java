@@ -3,8 +3,8 @@ package in.rks.academy.player;
 import in.rks.academy.common.FileStorageService;
 import in.rks.academy.common.PageResponse;
 import in.rks.academy.family.FamilyAuthService;
-import in.rks.academy.family.FamilyAuthService.IssuedParentPin;
-import in.rks.academy.family.FamilyAuthService.ParentLogin;
+import in.rks.academy.family.FamilyAuthService.IssuedFamilyPin;
+import in.rks.academy.family.FamilyAuthService.FamilyLogin;
 import in.rks.academy.player.PlayerDtos.FeeStatus;
 import in.rks.academy.player.PlayerDtos.PhotoResponse;
 import in.rks.academy.player.PlayerDtos.PlayerAttendance;
@@ -96,17 +96,17 @@ public class PlayerController {
         players.deactivate(id);
     }
 
-    @Operation(summary = "Whether the player's parent can sign in to the family portal")
+    @Operation(summary = "Whether the player's contact can sign in to the family app")
     @PreAuthorize("hasRole('OWNER')")
-    @GetMapping("/players/{id}/parent-login")
-    public ParentLogin parentLogin(@PathVariable long id) {
-        return family.parentLogin(id);
+    @GetMapping("/players/{id}/family-login")
+    public FamilyLogin familyLogin(@PathVariable long id) {
+        return family.familyLogin(id);
     }
 
-    @Operation(summary = "Issue the parent a one-time PIN (shown once), replacing any PIN they had")
+    @Operation(summary = "Issue the player's contact a one-time PIN (shown once), replacing any PIN they had")
     @PreAuthorize("hasRole('OWNER')")
-    @PostMapping("/players/{id}/parent-login/pin")
-    public ResponseEntity<IssuedParentPin> issueParentPin(@PathVariable long id) {
+    @PostMapping("/players/{id}/family-login/pin")
+    public ResponseEntity<IssuedFamilyPin> issueFamilyPin(@PathVariable long id) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(family.issuePin(id));
     }
 

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { use, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, MessageCircle, Pencil, Phone, ReceiptIndianRupee, SlidersHorizontal } from "lucide-react";
-import { ParentLoginCard } from "@/components/domain/ParentLoginCard";
+import { FamilyLoginCard } from "@/components/domain/FamilyLoginCard";
 import { AttendanceCard, FeeTimeline, ProfileHeader, ProfileInfoCards, SkillsCard } from "@/components/domain/profile";
 import { PlayerSheet } from "@/components/domain/sheets/PlayerSheet";
 import { RecordPaymentSheet, receiptHref } from "@/components/domain/sheets/RecordPaymentSheet";
@@ -13,6 +13,7 @@ import { Button, buttonClass } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { ErrorState, LoadingRegion, Skeleton } from "@/components/ui/States";
 import { api } from "@/lib/api";
+import { callLabel } from "@/lib/contact";
 import { formatPeriod, inr } from "@/lib/format";
 import { useCanSeeFees, useConfig, usePlayer, usePlayerAttendance, usePlayerPayments, usePlayerProgress } from "@/lib/queries";
 import type { PlayerDetail, Quote } from "@/lib/types";
@@ -52,10 +53,10 @@ export default function PlayerProfilePage({ params }: { params: Promise<{ id: st
             player={player.data}
             actions={
               <>
-                <a href={`tel:+91${player.data.parent.mobile}`} className={buttonClass({ variant: "secondary" })}>
-                  <Phone className="h-5 w-5" aria-hidden /> Call parent
+                <a href={`tel:+91${player.data.contact.mobile}`} className={buttonClass({ variant: "secondary" })}>
+                  <Phone className="h-5 w-5" aria-hidden /> {callLabel(player.data.contact.relation)}
                 </a>
-                <WhatsAppParent player={player.data} withFee={canSeeFees} />
+                <WhatsAppContact player={player.data} withFee={canSeeFees} />
                 {canSeeFees && (
                   <>
                     <Button variant="secondary" icon={<Pencil className="h-5 w-5" aria-hidden />} onClick={() => setEditing(true)}>
@@ -89,7 +90,7 @@ export default function PlayerProfilePage({ params }: { params: Promise<{ id: st
             />
           </div>
           {canSeeFees && <StaffFeeHistory player={player.data} />}
-          {canSeeFees && player.data.active && <ParentLoginCard playerId={id} />}
+          {canSeeFees && player.data.active && <FamilyLoginCard playerId={id} />}
 
           {progress.data && (
             <SkillsSheet open={editingSkills} onClose={() => setEditingSkills(false)} playerId={id} progress={progress.data} />
@@ -116,21 +117,23 @@ function useDueQuote(player: PlayerDetail, enabled: boolean) {
 }
 
 /**
- * Opens the user's own WhatsApp with a message to this player's parent already typed. It goes from their phone,
+ * Opens the user's own WhatsApp with a message to this player's contact (parent, guardian or the adult player)
+ * already typed. It goes from their phone,
  * not the academy's paid API number, so it costs nothing. For the owner, a due fee is included; coaches never see
  * fee amounts, so theirs is a plain greeting.
  */
-function WhatsAppParent({ player, withFee }: { player: PlayerDetail; withFee: boolean }) {
+function WhatsAppContact({ player, withFee }: { player: PlayerDetail; withFee: boolean }) {
   const due = useDueQuote(player, withFee);
   const quote = player.feeStatus === "DUE" ? due.data : undefined;
+  const about = player.contact.relation === "SELF" ? "your training" : player.name;
   const text = quote
-    ? `Vanakkam ${player.parent.name}! Fee reminder from RKS Academy for ${player.name} (${player.code}): ` +
+    ? `Vanakkam ${player.contact.name}! Fee reminder from RKS Academy for ${about} (${player.code}): ` +
       `${quote.plan.name} fee for ${formatPeriod(quote.periodFrom, quote.periodTo)} is ${inr(quote.total)}. ` +
       `Please pay at the earliest. Thank you!`
-    : `Vanakkam ${player.parent.name}! This is RKS Academy about ${player.name} (${player.code}).`;
+    : `Vanakkam ${player.contact.name}! This is RKS Academy about ${about} (${player.code}).`;
   return (
     <a
-      href={`https://wa.me/91${player.parent.mobile}?text=${encodeURIComponent(text)}`}
+      href={`https://wa.me/91${player.contact.mobile}?text=${encodeURIComponent(text)}`}
       target="_blank"
       rel="noreferrer"
       className={buttonClass({ variant: "secondary" })}

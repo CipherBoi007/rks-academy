@@ -29,10 +29,10 @@ export default function FamilyHomePage() {
       <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-eyebrow text-primary">
-            {family.data ? `${children.length === 1 ? "1 child" : `${children.length} children`} at RKS` : " "}
+            {family.data ? eyebrow(children) : " "}
           </p>
           <h1 className="mt-1 font-display text-[32px] font-bold uppercase leading-none sm:text-[40px] lg:text-5xl">
-            Vanakkam{family.data?.parentName ? `, ${family.data.parentName}` : ""}
+            Vanakkam{family.data?.holderName ? `, ${family.data.holderName}` : ""}
           </h1>
         </div>
         {children.length > 0 && <FamilySummary items={children} />}
@@ -41,13 +41,13 @@ export default function FamilyHomePage() {
       <ProductAd variant="hero" />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_340px] 2xl:grid-cols-[minmax(0,1fr)_380px] lg:items-start lg:gap-8">
-        <section aria-label="Your children" className="min-w-0">
+        <section aria-label="Your players" className="min-w-0">
           {family.isError ? (
             <Card>
               <ErrorState error={family.error} onRetry={() => family.refetch()} />
             </Card>
           ) : !family.data ? (
-            <LoadingRegion label="Loading your children">
+            <LoadingRegion label="Loading your players">
               <Skeleton className="h-72 rounded-2xl" />
             </LoadingRegion>
           ) : children.length === 0 ? (
@@ -73,7 +73,7 @@ export default function FamilyHomePage() {
                 </p>
               </div>
               <a
-                href={`https://wa.me/${config.whatsappNumber}?text=${encodeURIComponent("Vanakkam! I have a question about my child at RKS Academy.")}`}
+                href={`https://wa.me/${config.whatsappNumber}?text=${encodeURIComponent("Vanakkam! I have a question about RKS Academy.")}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className={buttonClass({ variant: "secondary" })}
@@ -94,6 +94,15 @@ export default function FamilyHomePage() {
       </div>
     </div>
   );
+}
+
+/** "Member at RKS" for an adult on their own, otherwise who is on the account: "2 children", "You and 1 child". */
+function eyebrow(players: FamilyChild[]): string {
+  const others = players.filter((p) => !p.self).length;
+  const self = players.length - others;
+  const kids = others === 1 ? "1 child" : `${others} children`;
+  if (self && !others) return "Member at RKS";
+  return `${self ? `You and ${kids}` : kids} at RKS`;
 }
 
 /** Three quick numbers for the whole family. */
@@ -131,6 +140,7 @@ function ChildCard({ child }: { child: FamilyChild }) {
             {/* In the two-up layout (very wide screens) the chip moves under the name so long names stay on one line. */}
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="font-display text-2xl font-bold uppercase leading-tight">{child.name}</h2>
+              {child.self && <span className="rounded-full bg-primary px-2.5 py-0.5 text-xs font-semibold text-white">You</span>}
               <span className="min-[1760px]:hidden">
                 <StatusChip status={child.feeStatus} />
               </span>

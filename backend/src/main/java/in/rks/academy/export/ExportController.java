@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/** CSV downloads. They contain fee amounts and parent phone numbers, so they are owner-only and never cached. */
+/** CSV downloads. They contain fee amounts and contact phone numbers, so they are owner-only and never cached. */
 @Tag(name = "Exports")
 @RestController
 @RequestMapping("/api/v1/exports")

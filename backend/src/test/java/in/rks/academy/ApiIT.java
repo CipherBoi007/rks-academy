@@ -459,7 +459,7 @@ class ApiIT {
                 .isEqualTo(json.readTree(wrong.getBody()).get("message").asText());
 
         JsonNode me = get(token, "/family/me");
-        assertThat(me.get("parentName").asText()).isEqualTo("K. Murugan");
+        assertThat(me.get("holderName").asText()).isEqualTo("K. Murugan");
         assertThat(me.get("children")).hasSize(1);
         assertThat(me.get("children").get(0).get("code").asText()).isEqualTo("RKS101");
 
@@ -511,13 +511,13 @@ class ApiIT {
     @Order(22)
     void theOwnerIssuesAOneTimePinThatMustBeReplaced() throws Exception {
         String before = familyLogin("9000000101");
-        JsonNode status = get(owner, "/players/1/parent-login");
+        JsonNode status = get(owner, "/players/1/family-login");
         assertThat(status.get("mobile").asText()).isEqualTo("9000000101");
         assertThat(status.get("hasPin").asBoolean()).isTrue();
-        assertThat(call(coach, HttpMethod.POST, "/players/1/parent-login/pin", null).getStatusCode())
+        assertThat(call(coach, HttpMethod.POST, "/players/1/family-login/pin", null).getStatusCode())
                 .as("only the owner issues parent PINs").isEqualTo(HttpStatus.FORBIDDEN);
 
-        JsonNode issued = json.readTree(call(owner, HttpMethod.POST, "/players/1/parent-login/pin", null).getBody());
+        JsonNode issued = json.readTree(call(owner, HttpMethod.POST, "/players/1/family-login/pin", null).getBody());
         String oneTime = issued.get("temporaryPin").asText();
         assertThat(oneTime).matches("\\d{6}");
         assertThat(issued.get("login").get("mustChangePin").asBoolean()).isTrue();
@@ -539,7 +539,7 @@ class ApiIT {
                 Map.of("mobile", "9000000101", "currentPin", oneTime, "newPin", "583920")).getBody())
                 .get("token").asText();
         assertThat(call(token, HttpMethod.GET, "/family/me", null).getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(get(owner, "/players/1/parent-login").get("mustChangePin").asBoolean()).isFalse();
+        assertThat(get(owner, "/players/1/family-login").get("mustChangePin").asBoolean()).isFalse();
         assertThat(call(null, HttpMethod.POST, "/family/auth/login", Map.of("mobile", "9000000101", "pin", "583920"))
                 .getStatusCode()).isEqualTo(HttpStatus.OK);
     }
@@ -571,7 +571,7 @@ class ApiIT {
         java.util.Set<String> seen = new java.util.HashSet<>();
         for (JsonNode d : get(owner, "/dues?size=100").get("content")) {
             long id = d.get("player").get("id").asLong();
-            String mobile = get(owner, "/players/" + id).get("parent").get("mobile").asText();
+            String mobile = get(owner, "/players/" + id).get("contact").get("mobile").asText();
             if (seen.add(mobile) && get(owner, "/players/" + id).get("siblings").isEmpty()) {
                 due.add(new long[] {id, Long.parseLong(mobile)});
             }
@@ -650,6 +650,42 @@ class ApiIT {
         ResponseEntity<String> refused = call(owner, HttpMethod.POST, "/payment-reports/" + pending + "/confirm", null);
         assertThat(refused.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
         assertThat(json.readTree(refused.getBody()).get("code").asText()).isEqualTo("ALREADY_COLLECTED");
+    }
+
+    @Test
+    @Order(25)
+    void adultPlayersManageTheirOwnAccount() throws Exception {
+        Map<String, Object> adult = new HashMap<>(Map.of("name", "Ravi Shankar", "dob", "1990-04-12",
+                "gender", "MALE", "contactRelation", "SELF", "contactMobile", "9000099001", "level", "BEGINNER",
+                "batchId", 1, "feePlanId", 1));
+        adult.put("contactName", "Someone Else");
+
+        // Under 18, a player needs a parent or guardian.
+        Map<String, Object> minor = new HashMap<>(adult);
+        minor.put("dob", "2012-01-01");
+        ResponseEntity<String> refused = call(owner, HttpMethod.POST, "/players", minor);
+        assertThat(refused.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+        assertThat(json.readTree(refused.getBody()).get("code").asText()).isEqualTo("MINOR_NEEDS_GUARDIAN");
+        minor.put("contactRelation", "GUARDIAN");
+        minor.remove("contactName");
+        assertThat(json.readTree(call(owner, HttpMethod.POST, "/players", minor).getBody()).get("code").asText())
+                .isEqualTo("CONTACT_NAME_REQUIRED");
+
+        // An adult is their own contact: the name is always theirs, whatever was sent.
+        JsonNode created = json.readTree(call(owner, HttpMethod.POST, "/players", adult).getBody());
+        long id = created.get("id").asLong();
+        assertThat(created.get("contact").get("relation").asText()).isEqualTo("SELF");
+        assertThat(created.get("contact").get("name").asText()).isEqualTo("Ravi Shankar");
+
+        // They sign in to the family app with their own number and see themselves.
+        String pin = json.readTree(call(owner, HttpMethod.POST, "/players/" + id + "/family-login/pin", null)
+                .getBody()).get("temporaryPin").asText();
+        String token = json.readTree(call(null, HttpMethod.POST, "/family/auth/set-pin",
+                Map.of("mobile", "9000099001", "currentPin", pin, "newPin", "580317")).getBody()).get("token").asText();
+        JsonNode me = get(token, "/family/me");
+        assertThat(me.get("holderName").asText()).isEqualTo("Ravi Shankar");
+        assertThat(me.get("children")).hasSize(1);
+        assertThat(me.get("children").get(0).get("self").asBoolean()).isTrue();
     }
 
     /** Demo parents all have PIN 123456 (db/demo/V7_1). */

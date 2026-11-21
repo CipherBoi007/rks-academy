@@ -29,8 +29,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Everything a parent can see: only their own children (active players with their mobile number), read-only.
- * A child who isn't theirs is reported as not found, so the portal never confirms that an ID exists.
+ * Everything a family account can see: only its own players (active players with its contact mobile number),
+ * read-only. A player who isn't theirs is reported as not found, so the portal never confirms that an ID exists.
  */
 @Service
 @Transactional(readOnly = true)
@@ -41,10 +41,12 @@ public class FamilyService {
 
     public record ChildCard(long id, String code, String name, String initials, String photoUrl, int age, Level level,
                             String batchName, LocalTime startTime, LocalTime endTime, List<DayOfWeek> days,
-                            String courtName, String coachName, FeeStatus feeStatus, DueInfo due, int attendancePct) {
+                            String courtName, String coachName, FeeStatus feeStatus, DueInfo due, int attendancePct,
+                            boolean self) {
     }
 
-    public record Family(String mobile, String parentName, List<ChildCard> children) {
+    /** holderName: whoever manages these players (a parent, a guardian, or an adult player themselves). */
+    public record Family(String mobile, String holderName, List<ChildCard> children) {
     }
 
     private final PlayerRepository players;
@@ -62,7 +64,7 @@ public class FamilyService {
         this.policies = policies;
     }
 
-    /** The signed-in parent. Endpoints under /api/v1/family/** only run for family tokens. */
+    /** The signed-in account. Endpoints under /api/v1/family/** only run for family tokens. */
     public static FamilyPrincipal current() {
         var auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !(auth.getPrincipal() instanceof FamilyPrincipal principal)) {
@@ -73,11 +75,10 @@ public class FamilyService {
 
     public Family family() {
         String mobile = current().mobile();
-        List<Player> children = players.findByParentMobileAndActiveTrueOrderByJoinDateAsc(mobile);
+        List<Player> children = players.findByContactMobileAndActiveTrueOrderByJoinDateAsc(mobile);
         Map<Long, BillingService.FeeState> states = billing.feeStates(children);
         List<ChildCard> cards = children.stream().map(p -> card(p, states.get(p.getId()))).toList();
-        String parentName = children.isEmpty() ? null : children.get(0).getParentName();
-        return new Family(mobile, parentName, cards);
+        return new Family(mobile, holderName(children), cards);
     }
 
     public PlayerDetail child(long id) {
@@ -105,12 +106,20 @@ public class FamilyService {
 
     public ReceiptDto receipt(String receiptNo) {
         ReceiptDto receipt = payments.receipt(receiptNo);
-        boolean ours = players.findByParentMobileAndActiveTrueOrderByJoinDateAsc(current().mobile()).stream()
+        boolean ours = players.findByContactMobileAndActiveTrueOrderByJoinDateAsc(current().mobile()).stream()
                 .anyMatch(p -> p.getCode().equals(receipt.playerCode()));
         if (!ours) {
             throw ApiException.notFound("Receipt", receiptNo);
         }
         return receipt;
+    }
+
+    /** The account holder's name: an adult player's own when they're on the account, else their contact's. */
+    static String holderName(List<Player> players) {
+        return players.stream().filter(p -> p.getContactRelation() == Player.ContactRelation.SELF).findFirst()
+                .or(() -> players.stream().findFirst())
+                .map(Player::getContactName)
+                .orElse(null);
     }
 
     /** The last day to pay a period's fee without a late fee. */
@@ -121,7 +130,7 @@ public class FamilyService {
     private Player own(long id) {
         String mobile = current().mobile();
         return players.findDetailed(id)
-                .filter(p -> p.isActive() && p.getParentMobile().equals(mobile))
+                .filter(p -> p.isActive() && p.getContactMobile().equals(mobile))
                 .orElseThrow(() -> ApiException.notFound("Player", id));
     }
 
@@ -136,6 +145,7 @@ public class FamilyService {
         return new ChildCard(p.getId(), p.getCode(), p.getName(), Names.initials(p.getName()), p.getPhotoUrl(),
                 p.ageOn(billing.today()), p.getLevel(), b.getName(), b.getStartTime(), b.getEndTime(),
                 List.copyOf(b.days()), b.getCourt().getName(), b.getCoach().getName(),
-                isDue ? FeeStatus.DUE : FeeStatus.PAID, due, playerService.attendance(p.getId(), null, null).pct());
+                isDue ? FeeStatus.DUE : FeeStatus.PAID, due, playerService.attendance(p.getId(), null, null).pct(),
+                p.getContactRelation() == Player.ContactRelation.SELF);
     }
 }

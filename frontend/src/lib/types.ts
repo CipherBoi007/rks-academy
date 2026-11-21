@@ -88,7 +88,7 @@ export interface PlayerDetail {
   address: string | null;
   level: Level;
   feeStatus: FeeStatus;
-  parent: { name: string; mobile: string; occupation: string | null };
+  contact: PlayerContact;
   joinDate: string;
   batch: { id: number; name: string; startTime: string; endTime: string };
   court: CourtRef;
@@ -99,13 +99,26 @@ export interface PlayerDetail {
   active: boolean;
 }
 
+/** Who manages a player's account: the player themselves (18 and over), or a parent or guardian. */
+export type ContactRelation = "SELF" | "PARENT" | "GUARDIAN";
+
+/** The player's contact. Their mobile number is the family-app sign-in; for SELF, name is the player's own. */
+export interface PlayerContact {
+  relation: ContactRelation;
+  name: string;
+  mobile: string;
+  occupation: string | null;
+}
+
 export interface PlayerInput {
   name: string;
   dob: string;
   gender: Gender;
-  parentName: string;
-  parentMobile: string;
-  parentOccupation?: string;
+  contactRelation: ContactRelation;
+  /** Required for a parent or guardian; the server ignores it for SELF. */
+  contactName?: string;
+  contactMobile: string;
+  contactOccupation?: string;
   bloodGroup?: string;
   school?: string;
   address?: string;
@@ -193,18 +206,19 @@ export interface StaffWithPin {
   temporaryPin: string;
 }
 
-/** Whether a player's parent can sign in to the family portal (owner only). */
-export interface ParentLogin {
+/** Whether the player's contact number can sign in to the family app (owner only). */
+export interface FamilyLogin {
   mobile: string;
-  parentName: string;
+  holderName: string;
+  relation: ContactRelation;
   hasPin: boolean;
   /** A one-time PIN was issued and hasn't been replaced yet. */
   mustChangePin: boolean;
   lastLoginAt: string | null;
 }
 
-export interface IssuedParentPin {
-  login: ParentLogin;
+export interface IssuedFamilyPin {
+  login: FamilyLogin;
   temporaryPin: string;
 }
 
@@ -316,12 +330,12 @@ export interface Payment {
   voidReason: string | null;
 }
 
-/** A parent's UPI payment from the family app, waiting for (or decided by) the owner. */
+/** A family's UPI payment from the family app, waiting for (or decided by) the owner. */
 export type PaymentReportStatus = "PENDING" | "CONFIRMED" | "REJECTED";
 
 export interface PaymentReport {
   id: number;
-  /** The full UPI reference for the owner; only its last 4 characters for parents. */
+  /** The full UPI reference for the owner; only its last 4 characters for families. */
   utr: string;
   amount: number;
   paidOn: string;
@@ -330,8 +344,8 @@ export interface PaymentReport {
   reviewedBy: string | null;
   reviewedAt: string | null;
   rejectReason: string | null;
-  parentName: string | null;
-  parentMobile: string | null;
+  holderName: string | null;
+  holderMobile: string | null;
   feesTotal: number;
   items: { player: PlayerRef; periodFrom: string; amount: number; receiptNo: string | null }[];
 }
@@ -382,7 +396,8 @@ export interface Receipt {
   academyPhone: string;
   playerCode: string;
   playerName: string;
-  parentName: string;
+  /** "Received with thanks from": the player's contact (the player themselves for adults). */
+  receivedFrom: string;
   batchName: string;
   planName: string;
   periodFrom: string;

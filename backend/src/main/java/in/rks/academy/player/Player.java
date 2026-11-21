@@ -25,6 +25,12 @@ public class Player extends BaseEntity {
 
     public enum Gender { MALE, FEMALE, OTHER }
 
+    /** Who manages the player's account: the player themselves (adults only), or a parent or guardian. */
+    public enum ContactRelation { SELF, PARENT, GUARDIAN }
+
+    /** Players under this age need a parent or guardian as their contact. */
+    public static final int ADULT_AGE = 18;
+
     @Column(nullable = false, unique = true, updatable = false)
     private String code;
 
@@ -41,14 +47,20 @@ public class Player extends BaseEntity {
     @Column(name = "photo_url")
     private String photoUrl;
 
-    @Column(name = "parent_name", nullable = false)
-    private String parentName;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "contact_relation", nullable = false)
+    private ContactRelation contactRelation = ContactRelation.PARENT;
 
-    @Column(name = "parent_mobile", nullable = false)
-    private String parentMobile;
+    /** For SELF, always the player's own name. */
+    @Column(name = "contact_name", nullable = false)
+    private String contactName;
 
-    @Column(name = "parent_occupation")
-    private String parentOccupation;
+    /** The family-app sign-in: everyone with this number on file shares one account. */
+    @Column(name = "contact_mobile", nullable = false)
+    private String contactMobile;
+
+    @Column(name = "contact_occupation")
+    private String contactOccupation;
 
     @Column(name = "blood_group")
     private String bloodGroup;
