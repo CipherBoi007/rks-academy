@@ -24,8 +24,7 @@ export default function FamilyFeesPage() {
   return (
     <div className="space-y-6 lg:space-y-8">
       <div>
-        <p className="text-xs font-bold uppercase tracking-eyebrow text-primary">Pay &amp; receipts</p>
-        <h1 className="mt-1 font-display text-[32px] font-bold uppercase leading-none sm:text-[40px] lg:text-5xl">Fees</h1>
+        <h1 className="font-display text-[32px] font-bold uppercase leading-none sm:text-[40px] lg:text-5xl">Fees</h1>
       </div>
 
       {fees.isError ? (

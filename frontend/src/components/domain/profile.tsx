@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRef, type ReactNode } from "react";
 import type { UseQueryResult } from "@tanstack/react-query";
-import { Briefcase, Cake, CalendarDays, Droplet, GraduationCap, MapPin, Phone, User } from "lucide-react";
+import { Cake, CalendarDays, Droplet, MapPin, Phone, User } from "lucide-react";
 import { AttendanceMonth } from "@/components/domain/AttendanceMonth";
 import { SkillProgress } from "@/components/domain/SkillProgress";
 import { Avatar } from "@/components/ui/Avatar";
@@ -72,7 +72,6 @@ export function ProfileInfoCards({ player, siblingHref }: { player: PlayerDetail
         <ul className="mt-5 divide-y divide-line">
           <InfoRow icon={<Cake className={icon} />} label="Date of birth" value={formatDate(player.dob)} />
           <InfoRow icon={<Droplet className={icon} />} label="Blood group" value={player.bloodGroup} />
-          <InfoRow icon={<GraduationCap className={icon} />} label="School" value={player.school} />
           <InfoRow icon={<MapPin className={icon} />} label="Address" value={player.address} />
         </ul>
       </Card>
@@ -93,7 +92,6 @@ export function ProfileInfoCards({ player, siblingHref }: { player: PlayerDetail
               </a>
             }
           />
-          <InfoRow icon={<Briefcase className={icon} />} label="Occupation" value={player.contact.occupation} />
           <InfoRow icon={<CalendarDays className={icon} />} label="Joined RKS" value={formatDate(player.joinDate)} />
         </ul>
         {player.siblings.length > 0 && (

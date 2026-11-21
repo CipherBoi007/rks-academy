@@ -31,7 +31,6 @@ function FeeStructure() {
   return (
     <>
       <PageHeader
-        eyebrow="Plans & policies"
         title="Fee structure"
         actions={
           <Button icon={<Plus className="h-5 w-5" aria-hidden />} onClick={() => setEditingPlan({ open: true })}>

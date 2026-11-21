@@ -34,9 +34,7 @@ const schema = z.object({
   contactRelation: z.enum(["SELF", "PARENT", "GUARDIAN"]),
   contactName: z.string().trim().max(100).optional(),
   contactMobile: z.string().trim().regex(/^\d{10}$/, "Enter a 10-digit mobile number"),
-  contactOccupation: z.string().trim().max(80).optional(),
   bloodGroup: z.string().optional(),
-  school: z.string().trim().max(120).optional(),
   address: z.string().trim().max(200).optional(),
   siblingOfPlayerId: z
     .string()
@@ -57,7 +55,7 @@ type Values = z.input<typeof schema>;
 type Parsed = z.output<typeof schema>;
 const FIELDS = [
   "name", "dob", "gender", "level", "batchId", "feePlanId", "joinDate", "contactRelation", "contactName",
-  "contactMobile", "contactOccupation", "bloodGroup", "school", "address", "siblingOfPlayerId",
+  "contactMobile", "bloodGroup", "address", "siblingOfPlayerId",
 ];
 
 const RELATIONS: { value: ContactRelation; label: string }[] = [
@@ -78,9 +76,7 @@ function defaults(player?: PlayerDetail, today?: string): Values {
     contactRelation: player?.contact.relation ?? "PARENT",
     contactName: player && player.contact.relation !== "SELF" ? player.contact.name : "",
     contactMobile: player?.contact.mobile ?? "",
-    contactOccupation: player?.contact.occupation ?? "",
     bloodGroup: player?.bloodGroup ?? "",
-    school: player?.school ?? "",
     address: player?.address ?? "",
     siblingOfPlayerId: player?.siblings[0] ? String(player.siblings[0].id) : "",
   };
@@ -311,23 +307,15 @@ export function PlayerSheet({ open, onClose, player }: { open: boolean; onClose:
             <Input id="contactName" invalid={Boolean(errors.contactName)} {...register("contactName")} />
           </Field>
         )}
-        <div className="grid grid-cols-2 gap-3">
-          <Field id="contactMobile" label={relation === "SELF" ? "Player's mobile" : "Mobile"} error={errors.contactMobile?.message}>
-            <Input
-              id="contactMobile"
-              type="tel"
-              inputMode="numeric"
-              placeholder="10 digits"
-              invalid={Boolean(errors.contactMobile)}
-              {...cleaned(register("contactMobile"), MOBILE)}
-            />
-          </Field>
-          <Field id="contactOccupation" label="Occupation">
-            <Input id="contactOccupation" {...register("contactOccupation")} />
-          </Field>
-        </div>
-        <Field id="school" label={adult ? "School / college" : "School"}>
-          <Input id="school" {...register("school")} />
+        <Field id="contactMobile" label={relation === "SELF" ? "Player's mobile" : "Mobile"} error={errors.contactMobile?.message}>
+          <Input
+            id="contactMobile"
+            type="tel"
+            inputMode="numeric"
+            placeholder="10 digits"
+            invalid={Boolean(errors.contactMobile)}
+            {...cleaned(register("contactMobile"), MOBILE)}
+          />
         </Field>
         <Field id="address" label="Address">
           <Input id="address" {...register("address")} />

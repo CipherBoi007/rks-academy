@@ -77,12 +77,12 @@ public class ExportService {
         Map<Long, BillingService.FeeState> states = billing.feeStates(list);
         LocalDate today = billing.today();
         Csv csv = new Csv().row("Player ID", "Name", "Date of birth", "Age", "Gender", "Level", "Batch", "Court",
-                "Plan", "Fee status", "Contact", "Contact is", "Contact mobile", "School", "Joined");
+                "Plan", "Fee status", "Contact", "Contact is", "Contact mobile", "Joined");
         for (Player p : list) {
             csv.row(p.getCode(), p.getName(), p.getDob(), p.ageOn(today), p.getGender(), p.getLevel(),
                     p.getBatch().getName(), p.getBatch().getCourt().getName(), p.getFeePlan().getName(),
                     states.get(p.getId()).due() ? "DUE" : "PAID", p.getContactName(), relation(p), p.getContactMobile(),
-                    p.getSchool(), p.getJoinDate());
+                    p.getJoinDate());
         }
         return csv.bytes();
     }

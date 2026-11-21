@@ -34,7 +34,6 @@ export default function StorePage() {
   return (
     <>
       <PageHeader
-        eyebrow="RKS Pro Shop · Academy prices"
         title="Store"
         inlineActions
         actions={

@@ -220,9 +220,7 @@ public class PlayerService {
         p.setGender(req.gender());
         applyContact(p, req);
         p.setContactMobile(req.contactMobile());
-        p.setContactOccupation(blankToNull(req.contactOccupation()));
         p.setBloodGroup(blankToNull(req.bloodGroup()));
-        p.setSchool(blankToNull(req.school()));
         p.setAddress(blankToNull(req.address()));
         p.setLevel(req.level());
         p.setBatch(batch);
@@ -293,10 +291,9 @@ public class PlayerService {
                 .sorted(Comparator.comparing(Player::getJoinDate))
                 .map(PlayerRef::of).toList();
         return new PlayerDetail(p.getId(), p.getCode(), p.getName(), Names.initials(p.getName()), p.getPhotoUrl(),
-                p.getDob(), p.ageOn(billing.today()), p.getGender(), p.getBloodGroup(), p.getSchool(),
+                p.getDob(), p.ageOn(billing.today()), p.getGender(), p.getBloodGroup(),
                 p.getAddress(), p.getLevel(), status(state),
-                new ContactInfo(p.getContactRelation(), p.getContactName(), p.getContactMobile(),
-                        p.getContactOccupation()), p.getJoinDate(),
+                new ContactInfo(p.getContactRelation(), p.getContactName(), p.getContactMobile()), p.getJoinDate(),
                 new BatchInfo(b.getId(), b.getName(), b.getStartTime(), b.getEndTime()),
                 CourtRef.of(b.getCourt()),
                 new CoachInfo(c.getId(), c.getName(), c.getTitle(), Names.initials(c.getName())),

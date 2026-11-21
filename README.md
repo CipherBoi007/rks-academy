@@ -466,6 +466,7 @@ The schema is created and evolved **only** by Flyway scripts, which run automati
 | `V7__family_pins.sql` | parent PINs (`pin_hash`, `must_change_pin`); drops `login_code` |
 | `V8__payment_reports.sql` | `payment_report`, `payment_report_item`: UPI payments families report, confirmed or rejected by the owner |
 | `V9__player_contacts.sql` | `player.parent_*` becomes `contact_*` plus `contact_relation` (SELF, PARENT, GUARDIAN); `parent_account` becomes `family_account` |
+| `V10__drop_occupation_and_school.sql` | drops `player.contact_occupation` and `player.school`: never used, so not collected |
 | `V6__stored_files_and_rls.sql` | `stored_file` (uploaded images), and **row-level security switched on** for every table |
 | `db/demo/V2_1 … V2_5` | **Dev only:** demo staff logins, players, payments, attendance, products |
 | `db/demo/V6_1` | **Dev only:** moves the demo logins' PIN from `1234` to `123456` (PINs became 6–12 digits) |

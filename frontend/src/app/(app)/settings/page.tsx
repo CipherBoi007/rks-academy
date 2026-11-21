@@ -34,7 +34,7 @@ function Settings() {
 
   return (
     <>
-      <PageHeader eyebrow="Academy setup" title="Settings" />
+      <PageHeader title="Settings" />
       <div className="scrollbar-none relative -mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
         <SegmentedTabs<Tab>
           label="Settings sections"

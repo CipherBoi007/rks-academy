@@ -59,13 +59,9 @@ public class Player extends BaseEntity {
     @Column(name = "contact_mobile", nullable = false)
     private String contactMobile;
 
-    @Column(name = "contact_occupation")
-    private String contactOccupation;
-
     @Column(name = "blood_group")
     private String bloodGroup;
 
-    private String school;
 
     private String address;
 

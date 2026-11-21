@@ -33,7 +33,7 @@ public final class PlayerDtos {
     }
 
     /** Who manages the player's account. For SELF, name is the player's own. */
-    public record ContactInfo(Player.ContactRelation relation, String name, String mobile, String occupation) {
+    public record ContactInfo(Player.ContactRelation relation, String name, String mobile) {
     }
 
     public record BatchInfo(long id, String name, LocalTime startTime, LocalTime endTime) {
@@ -43,7 +43,7 @@ public final class PlayerDtos {
     }
 
     public record PlayerDetail(long id, String code, String name, String initials, String photoUrl, LocalDate dob,
-                               int age, Player.Gender gender, String bloodGroup, String school, String address,
+                               int age, Player.Gender gender, String bloodGroup, String address,
                                Level level, FeeStatus feeStatus, ContactInfo contact, LocalDate joinDate,
                                BatchInfo batch, CourtRef court, CoachInfo coach, PlanRef plan, UUID siblingGroupId,
                                List<PlayerRef> siblings, boolean active) {
@@ -57,10 +57,8 @@ public final class PlayerDtos {
             /* Required for a parent or guardian; ignored for SELF, where it is the player's own name. */
             @Size(max = 100) String contactName,
             @NotBlank @Pattern(regexp = "\\d{10}", message = "Enter a 10-digit mobile number") String contactMobile,
-            @Size(max = 80) String contactOccupation,
             @Pattern(regexp = "A\\+|A-|B\\+|B-|AB\\+|AB-|O\\+|O-", message = "Pick a valid blood group")
             String bloodGroup,
-            @Size(max = 120) String school,
             @Size(max = 200) String address,
             @NotNull Level level,
             @NotNull @Positive Long batchId,

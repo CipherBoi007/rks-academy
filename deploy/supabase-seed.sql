@@ -118,14 +118,14 @@ INSERT INTO admin_user (name, mobile, pin_hash, role, coach_id, must_change_pin)
 -- -----------------------------------------------------------------------------------------------------
 CREATE TEMP TABLE new_player (
     name text, dob date, gender text, relation text, contact_name text, contact_mobile text, level text,
-    batch_name text, plan_name text, join_date date, school text, blood_group text
+    batch_name text, plan_name text, join_date date, blood_group text
 ) ON COMMIT DROP;
 
 INSERT INTO new_player VALUES
---   name                 dob           gender    relation   contact name         contact mobile  level         batch                 plan        joined        school               blood
-    ('CHANGE_ME Child A', '2014-05-20', 'MALE',   'PARENT',  'CHANGE_ME Parent',  'CHANGE_ME',    'BEGINNER',   'Morning Beginners',  'Monthly',  '2026-11-01', 'CHANGE_ME School',  'O+'),   -- CHANGE
-    ('CHANGE_ME Child B', '2016-02-11', 'FEMALE', 'PARENT',  'CHANGE_ME Parent',  'CHANGE_ME',    'BEGINNER',   'Evening Juniors',    'Quarterly','2026-11-01', NULL,                NULL),   -- CHANGE
-    ('CHANGE_ME Adult',   '1992-08-30', 'MALE',   'SELF',    NULL,                'CHANGE_ME_A',  'BEGINNER',   'Morning Beginners',  'Monthly',  '2026-11-01', NULL,                NULL);   -- CHANGE (or delete)
+--   name                 dob           gender    relation   contact name         contact mobile  level         batch                 plan        joined        blood
+    ('CHANGE_ME Child A', '2014-05-20', 'MALE',   'PARENT',  'CHANGE_ME Parent',  'CHANGE_ME',    'BEGINNER',   'Morning Beginners',  'Monthly',  '2026-11-01', 'O+'),   -- CHANGE
+    ('CHANGE_ME Child B', '2016-02-11', 'FEMALE', 'PARENT',  'CHANGE_ME Parent',  'CHANGE_ME',    'BEGINNER',   'Evening Juniors',    'Quarterly','2026-11-01', NULL),   -- CHANGE
+    ('CHANGE_ME Adult',   '1992-08-30', 'MALE',   'SELF',    NULL,                'CHANGE_ME_A',  'BEGINNER',   'Morning Beginners',  'Monthly',  '2026-11-01', NULL);   -- CHANGE (or delete)
 
 -- Stop on a contact that the app would refuse: under-18s need a parent or guardian, who must be named.
 DO $$
@@ -159,10 +159,10 @@ END $$;
 -- and the starting level goes into the level history.
 WITH added AS (
     INSERT INTO player (code, name, dob, gender, contact_relation, contact_name, contact_mobile, level, batch_id,
-                        fee_plan_id, join_date, plan_start_date, school, blood_group)
+                        fee_plan_id, join_date, plan_start_date, blood_group)
     SELECT 'RKS' || nextval('player_code_seq'), n.name, n.dob, n.gender, n.relation,
            CASE WHEN n.relation = 'SELF' THEN n.name ELSE trim(n.contact_name) END, n.contact_mobile,
-           n.level, b.id, f.id, n.join_date, date_trunc('month', n.join_date)::date, n.school, n.blood_group
+           n.level, b.id, f.id, n.join_date, date_trunc('month', n.join_date)::date, n.blood_group
     FROM new_player n
     JOIN batch b ON b.name = n.batch_name AND b.active
     JOIN fee_plan f ON f.name = n.plan_name AND f.active

@@ -77,7 +77,7 @@ Every table has `id BIGSERIAL PK`, `created_at`, and `updated_at timestamptz`. M
 | `batch` | name, court_id FK, coach_id FK, start_time `TIME`, end_time, days_of_week `VARCHAR` (e.g. `MON,TUE,WED,THU,FRI`), level (nullable = mixed), active | |
 | `fee_plan` | name, level_label, price, period_months, sessions_per_week, most_popular bool, sort_order, active | at most one `most_popular` (partial unique index) |
 | `fee_plan_perk` | fee_plan_id FK, position, text | `@ElementCollection` |
-| `player` | code (`RKS101`), name, dob, gender `MALE\|FEMALE\|OTHER`, photo_url, parent_name, parent_mobile, parent_occupation, blood_group, school, address, level, batch_id FK, fee_plan_id FK, join_date, plan_start_date (always the 1st of a month), active, sibling_group_id `UUID` nullable | unique(code); index(name), index(batch_id) |
+| `player` | code (`RKS101`), name, dob, gender `MALE\|FEMALE\|OTHER`, photo_url, contact_relation (SELF/PARENT/GUARDIAN), contact_name, contact_mobile, blood_group, address, level, batch_id FK, fee_plan_id FK, join_date, plan_start_date (always the 1st of a month), active, sibling_group_id `UUID` nullable | unique(code); index(name), index(batch_id) |
 | `player_level_history` | player_id, level, achieved_on | feeds the level stepper |
 | `player_skill` | player_id, skill `FOOTWORK\|SMASH\|DEFENCE\|NET_PLAY\|STAMINA`, score 0–100, updated_on | PK(player_id, skill); the skill bars |
 | `attendance_record` | player_id, batch_id, date, status `PRESENT\|ABSENT`, marked_by FK admin_user | **unique(player_id, batch_id, date)** |

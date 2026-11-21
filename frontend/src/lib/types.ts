@@ -84,7 +84,6 @@ export interface PlayerDetail {
   age: number;
   gender: Gender;
   bloodGroup: string | null;
-  school: string | null;
   address: string | null;
   level: Level;
   feeStatus: FeeStatus;
@@ -107,7 +106,6 @@ export interface PlayerContact {
   relation: ContactRelation;
   name: string;
   mobile: string;
-  occupation: string | null;
 }
 
 export interface PlayerInput {
@@ -118,9 +116,7 @@ export interface PlayerInput {
   /** Required for a parent or guardian; the server ignores it for SELF. */
   contactName?: string;
   contactMobile: string;
-  contactOccupation?: string;
   bloodGroup?: string;
-  school?: string;
   address?: string;
   level: Level;
   batchId: number;
@@ -472,21 +468,6 @@ export interface ReminderRun {
   sent: number;
   failed: number;
   alreadySent: number;
-}
-
-/** One parent's fee reminder for a period. provider "log" means it was only recorded, never sent. */
-export interface FeeReminder {
-  id: number;
-  player: PlayerRef;
-  periodFrom: string;
-  toMobile: string;
-  amount: number;
-  status: "SENT" | "FAILED";
-  provider: string;
-  /** Meta's exact error when it failed, e.g. "(#132001) Template name does not exist". */
-  error: string | null;
-  attempts: number;
-  sentAt: string | null;
 }
 
 /** delivered: accepted by Meta. undelivered: failed, or only recorded while WhatsApp wasn't connected. */

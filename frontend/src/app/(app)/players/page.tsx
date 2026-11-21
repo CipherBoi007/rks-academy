@@ -14,7 +14,7 @@ import { PillGroup } from "@/components/ui/Pills";
 import { Sheet } from "@/components/ui/Sheet";
 import { EmptyState, ErrorState, LoadingRegion, Skeleton } from "@/components/ui/States";
 import { LEVEL_LABEL, LEVELS } from "@/lib/format";
-import { useBatches, useCanSeeFees, useCourts, useDashboardSummary, usePlayers, type PlayerFilters } from "@/lib/queries";
+import { useBatches, useCanSeeFees, useCourts, usePlayers, type PlayerFilters } from "@/lib/queries";
 import type { FeeStatus, Level } from "@/lib/types";
 import { useDebounced } from "@/lib/useDebounced";
 
@@ -46,8 +46,6 @@ export default function PlayersPage() {
     level: filters.level === "ALL" ? undefined : filters.level,
   };
   const players = usePlayers(query);
-  const summary = useDashboardSummary();
-  const batches = useBatches();
   const list = players.data?.pages.flatMap((p) => p.content) ?? [];
   const total = players.data?.pages[0]?.totalElements ?? 0;
   const activeFilterCount = [filters.batchId, filters.courtId, filters.fee !== "ALL", filters.level !== "ALL"].filter(Boolean).length;
@@ -63,7 +61,6 @@ export default function PlayersPage() {
   return (
     <>
       <PageHeader
-        eyebrow={`${summary.data?.activePlayers ?? "–"} enrolled · ${batches.data?.length ?? "–"} batches`}
         title="Players"
         inlineActions
         actions={

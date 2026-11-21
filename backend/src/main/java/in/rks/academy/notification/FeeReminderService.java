@@ -93,13 +93,9 @@ public class FeeReminderService {
     }
 
     @Transactional(readOnly = true)
-    public PageResponse<ReminderDto> list(YearMonth month, boolean undeliveredOnly, int page, int size) {
+    public PageResponse<ReminderDto> list(YearMonth month, int page, int size) {
         var pageable = PageRequest.of(page, size, Sort.by(Sort.Order.desc("updatedAt")));
-        LocalDate from = month.atDay(1);
-        LocalDate to = month.atEndOfMonth();
-        return PageResponse.of(undeliveredOnly
-                        ? reminders.findUndelivered(from, to, pageable)
-                        : reminders.findByPeriodFromBetween(from, to, pageable),
+        return PageResponse.of(reminders.findByPeriodFromBetween(month.atDay(1), month.atEndOfMonth(), pageable),
                 r -> new ReminderDto(r.getId(), PlayerRef.of(r.getPlayer()), r.getPeriodFrom(), r.getToMobile(),
                         r.getAmount(), r.getMessage(), r.getStatus(), r.getProvider(), r.getError(),
                         r.getAttempts(), r.getSentAt()));

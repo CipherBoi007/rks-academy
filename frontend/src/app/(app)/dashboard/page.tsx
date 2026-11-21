@@ -10,7 +10,7 @@ import { KpiCard } from "@/components/ui/KpiCard";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState, ErrorState, LoadingRegion, Skeleton } from "@/components/ui/States";
 import { cn } from "@/lib/cn";
-import { formatLongDate, formatMonth, formatTimeRange, inr } from "@/lib/format";
+import { formatMonth, formatTimeRange, inr } from "@/lib/format";
 import { useCanSeeFees, useDashboardSummary, useDues, useMe, useRecentPayments, useTodayCourts } from "@/lib/queries";
 import type { CourtDay } from "@/lib/types";
 
@@ -26,7 +26,6 @@ export default function DashboardPage() {
         Vanakkam, <span className="text-lg font-bold text-primary">{me?.displayName}</span>
       </p>
       <PageHeader
-        eyebrow={s ? formatLongDate(s.date) : " "}
         title="Academy overview"
         actions={
           <ButtonLink href="/attendance" icon={<CalendarCheck className="h-5 w-5" aria-hidden />} className="w-full sm:w-auto">

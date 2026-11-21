@@ -27,7 +27,7 @@ export default function FamilyShopPage() {
 
   return (
     <>
-      <PageHeader eyebrow="RKS Pro Shop · Academy prices" title="Shop" />
+      <PageHeader title="Shop" />
       <SearchInput label="Search the shop" placeholder="Search rackets, shuttles, shoes…" value={q} onChange={(e) => setQ(e.target.value)} />
       <PillGroup<CategoryFilter>
         label="Category"

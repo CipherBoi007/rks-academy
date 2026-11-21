@@ -116,8 +116,6 @@ class ApiIT {
         JsonNode status = get(owner, "/notifications/fee-reminders/status?month=2026-11");
         assertThat(status.get("delivered").asInt()).isZero();
         assertThat(status.get("undelivered").asInt()).isEqualTo(8);
-        assertThat(get(owner, "/notifications/fee-reminders?month=2026-11&undelivered=true").get("totalElements")
-                .asInt()).isEqualTo(8);
         assertThat(call(coach, HttpMethod.POST, "/notifications/fee-reminders", null).getStatusCode())
                 .isEqualTo(HttpStatus.FORBIDDEN);
     }

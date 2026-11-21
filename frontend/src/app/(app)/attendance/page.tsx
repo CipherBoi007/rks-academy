@@ -46,7 +46,7 @@ export default function AttendancePage() {
 
   return (
     <>
-      <PageHeader eyebrow="Daily check-in" title="Attendance" />
+      <PageHeader title="Attendance" />
 
       <Card className="space-y-5 p-4 sm:p-5">
         <div className="flex flex-col gap-5 lg:flex-row lg:gap-6">

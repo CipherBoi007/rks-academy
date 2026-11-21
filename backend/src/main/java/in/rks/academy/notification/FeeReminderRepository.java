@@ -26,12 +26,4 @@ public interface FeeReminderRepository extends JpaRepository<FeeReminder, Long> 
             """)
     long countDelivered(LocalDate from, LocalDate to);
 
-    /** Reminders that need attention: failed at Meta, or only recorded while WhatsApp wasn't connected. */
-    @EntityGraph(attributePaths = "player")
-    @Query("""
-            select r from FeeReminder r
-            where r.periodFrom between :from and :to
-              and (r.status = in.rks.academy.notification.FeeReminder.Status.FAILED or r.provider = 'log')
-            """)
-    Page<FeeReminder> findUndelivered(LocalDate from, LocalDate to, Pageable pageable);
 }

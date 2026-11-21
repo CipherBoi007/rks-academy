@@ -28,10 +28,7 @@ export default function FamilyHomePage() {
     <div className="space-y-6 lg:space-y-8">
       <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-eyebrow text-primary">
-            {family.data ? eyebrow(children) : " "}
-          </p>
-          <h1 className="mt-1 font-display text-[32px] font-bold uppercase leading-none sm:text-[40px] lg:text-5xl">
+          <h1 className="font-display text-[32px] font-bold uppercase leading-none sm:text-[40px] lg:text-5xl">
             Vanakkam{family.data?.holderName ? `, ${family.data.holderName}` : ""}
           </h1>
         </div>
@@ -94,15 +91,6 @@ export default function FamilyHomePage() {
       </div>
     </div>
   );
-}
-
-/** "Member at RKS" for an adult on their own, otherwise who is on the account: "2 children", "You and 1 child". */
-function eyebrow(players: FamilyChild[]): string {
-  const others = players.filter((p) => !p.self).length;
-  const self = players.length - others;
-  const kids = others === 1 ? "1 child" : `${others} children`;
-  if (self && !others) return "Member at RKS";
-  return `${self ? `You and ${kids}` : kids} at RKS`;
 }
 
 /** Three quick numbers for the whole family. */

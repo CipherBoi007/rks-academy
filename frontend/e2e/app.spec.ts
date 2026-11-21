@@ -38,7 +38,6 @@ test("players filter by fee status, search by ID, and open a profile", async ({ 
   await page.getByRole("link", { name: /Aravind Murugan/ }).click();
 
   await expect(page.getByRole("heading", { name: "Aravind Murugan" })).toBeVisible();
-  await expect(page.getByText("Schwartz Hr. Sec. School")).toBeVisible();
   await expect(page.getByText("Junior Coach")).toBeVisible();
   await expect(page.getByRole("meter", { name: "Net play" })).toHaveAttribute("aria-valuenow", "88");
   await expect(page.getByRole("link", { name: "RKS/26/1000" })).toBeVisible();
