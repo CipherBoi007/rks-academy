@@ -9,6 +9,7 @@ import in.rks.academy.billing.BillingService.FeeState;
 import in.rks.academy.billing.FeePlan;
 import in.rks.academy.billing.FeePlanRepository;
 import in.rks.academy.billing.FeeRules;
+import in.rks.academy.billing.PaymentRepository;
 import in.rks.academy.coach.Coach;
 import in.rks.academy.common.ApiException;
 import in.rks.academy.common.FileStorageService;
@@ -18,6 +19,8 @@ import in.rks.academy.common.Refs.BatchRef;
 import in.rks.academy.common.Refs.CourtRef;
 import in.rks.academy.common.Refs.PlanRef;
 import in.rks.academy.common.Refs.PlayerRef;
+import in.rks.academy.family.FamilyAuthService;
+import in.rks.academy.family.PaymentReportRepository;
 import in.rks.academy.player.PlayerDtos.AttendanceDay;
 import in.rks.academy.player.PlayerDtos.BatchInfo;
 import in.rks.academy.player.PlayerDtos.CoachInfo;
@@ -61,10 +64,14 @@ public class PlayerService {
     private final AttendanceRepository attendance;
     private final BillingService billing;
     private final FileStorageService files;
+    private final PaymentRepository payments;
+    private final PaymentReportRepository reports;
+    private final FamilyAuthService familyAuth;
 
     public PlayerService(PlayerRepository players, PlayerLevelHistoryRepository levels, PlayerSkillRepository skills,
                          BatchRepository batches, FeePlanRepository plans, AttendanceRepository attendance,
-                         BillingService billing, FileStorageService files) {
+                         BillingService billing, FileStorageService files, PaymentRepository payments,
+                         PaymentReportRepository reports, FamilyAuthService familyAuth) {
         this.players = players;
         this.levels = levels;
         this.skills = skills;
@@ -73,6 +80,9 @@ public class PlayerService {
         this.attendance = attendance;
         this.billing = billing;
         this.files = files;
+        this.payments = payments;
+        this.reports = reports;
+        this.familyAuth = familyAuth;
     }
 
     public PageResponse<PlayerSummary> search(Filter f, int page, int size) {
@@ -143,10 +153,55 @@ public class PlayerService {
         return get(id);
     }
 
-    /** Soft delete: history (payments, attendance) must stay intact. */
+    /**
+     * The player has left: they drop off lists, attendance, dues and reminders, and their family-app access ends
+     * unless someone else is on the same number. Payments, receipts and attendance stay on record.
+     */
     @Transactional
-    public void deactivate(long id) {
-        load(id).setActive(false);
+    public PlayerDetail leave(long id) {
+        Player p = load(id);
+        if (!p.isActive()) {
+            throw ApiException.conflict("ALREADY_LEFT", p.getName() + " has already left");
+        }
+        p.setActive(false);
+        return get(id);
+    }
+
+    /** Brings a player back with the same player ID and history. Their batch and plan must still be running. */
+    @Transactional
+    public PlayerDetail rejoin(long id) {
+        Player p = load(id);
+        if (p.isActive()) {
+            throw ApiException.conflict("ALREADY_ACTIVE", p.getName() + " is already active");
+        }
+        if (!p.getBatch().isActive() || !p.getFeePlan().isActive()) {
+            throw ApiException.rule("PICK_ACTIVE_BATCH_AND_PLAN", "Their batch or fee plan has been closed. "
+                    + "Edit the player to pick an active one, then rejoin.");
+        }
+        p.setActive(true);
+        return get(id);
+    }
+
+    /**
+     * Deletes a player added by mistake. Only allowed while there is nothing on record for them (no payments,
+     * attendance or payment reports); anyone with history is marked as left instead, so the accounts stay whole.
+     */
+    @Transactional
+    public void delete(long id) {
+        Player p = load(id);
+        if (hasHistory(id)) {
+            throw ApiException.conflict("PLAYER_HAS_HISTORY", p.getName() + " has payments or attendance on record, "
+                    + "so they can't be deleted. Mark them as left instead.");
+        }
+        String mobile = p.getContactMobile();
+        files.deleteQuietly(FileStorageService.Kind.PLAYER_PHOTO, p.getPhotoUrl());
+        players.delete(p); // level history, skills and reminders go with it (ON DELETE CASCADE)
+        players.flush();
+        familyAuth.forgetIfUnused(mobile);
+    }
+
+    private boolean hasHistory(long id) {
+        return payments.existsByPlayerId(id) || attendance.existsByPlayerId(id) || reports.existsForPlayer(id);
     }
 
     @Transactional
@@ -279,7 +334,7 @@ public class PlayerService {
     private PlayerSummary summary(Player p, FeeState state) {
         return new PlayerSummary(p.getId(), p.getCode(), p.getName(), Names.initials(p.getName()), p.getPhotoUrl(),
                 p.ageOn(billing.today()), p.getGender(), p.getLevel(), BatchRef.of(p.getBatch()),
-                CourtRef.of(p.getBatch().getCourt()), status(state));
+                CourtRef.of(p.getBatch().getCourt()), status(p, state));
     }
 
     private PlayerDetail detail(Player p, FeeState state) {
@@ -292,15 +347,18 @@ public class PlayerService {
                 .map(PlayerRef::of).toList();
         return new PlayerDetail(p.getId(), p.getCode(), p.getName(), Names.initials(p.getName()), p.getPhotoUrl(),
                 p.getDob(), p.ageOn(billing.today()), p.getGender(), p.getBloodGroup(),
-                p.getAddress(), p.getLevel(), status(state),
+                p.getAddress(), p.getLevel(), status(p, state),
                 new ContactInfo(p.getContactRelation(), p.getContactName(), p.getContactMobile()), p.getJoinDate(),
                 new BatchInfo(b.getId(), b.getName(), b.getStartTime(), b.getEndTime()),
                 CourtRef.of(b.getCourt()),
                 new CoachInfo(c.getId(), c.getName(), c.getTitle(), Names.initials(c.getName())),
-                PlanRef.of(p.getFeePlan()), p.getSiblingGroupId(), siblings, p.isActive());
+                PlanRef.of(p.getFeePlan()), p.getSiblingGroupId(), siblings, p.isActive(), !hasHistory(p.getId()));
     }
 
-    private static FeeStatus status(FeeState state) {
+    private static FeeStatus status(Player p, FeeState state) {
+        if (!p.isActive()) {
+            return FeeStatus.LEFT;
+        }
         return state != null && state.due() ? FeeStatus.DUE : FeeStatus.PAID;
     }
 

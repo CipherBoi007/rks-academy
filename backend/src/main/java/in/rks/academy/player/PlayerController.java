@@ -88,12 +88,26 @@ public class PlayerController {
         return players.update(id, req);
     }
 
-    @Operation(summary = "Deactivate a player. Payments and attendance history are kept.")
+    @Operation(summary = "Mark a player as left. Payments, receipts and attendance are kept.")
+    @PreAuthorize("hasRole('OWNER')")
+    @PostMapping("/players/{id}/leave")
+    public PlayerDetail leave(@PathVariable long id) {
+        return players.leave(id);
+    }
+
+    @Operation(summary = "Bring back a player who left, with the same player ID and history")
+    @PreAuthorize("hasRole('OWNER')")
+    @PostMapping("/players/{id}/rejoin")
+    public PlayerDetail rejoin(@PathVariable long id) {
+        return players.rejoin(id);
+    }
+
+    @Operation(summary = "Delete a player added by mistake. Refused (409) once they have payments or attendance.")
     @PreAuthorize("hasRole('OWNER')")
     @DeleteMapping("/players/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deactivate(@PathVariable long id) {
-        players.deactivate(id);
+    public void delete(@PathVariable long id) {
+        players.delete(id);
     }
 
     @Operation(summary = "Whether the player's contact can sign in to the family app")

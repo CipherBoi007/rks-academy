@@ -41,5 +41,10 @@ public interface PaymentReportRepository extends JpaRepository<PaymentReport, Lo
 
     long countByStatus(PaymentReport.Status status);
 
+    @Query("select count(i) > 0 from PaymentReportItem i where i.player.id = :playerId")
+    boolean existsForPlayer(long playerId);
+
+    boolean existsByAccountId(long accountId);
+
     boolean existsByUtrAndStatusNot(String utr, PaymentReport.Status status);
 }

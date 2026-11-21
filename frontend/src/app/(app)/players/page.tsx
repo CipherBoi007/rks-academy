@@ -22,13 +22,14 @@ type FeeFilter = FeeStatus | "ALL";
 type LevelFilter = Level | "ALL";
 
 interface Filters {
+  status: "CURRENT" | "LEFT";
   batchId: number | "";
   courtId: number | "";
   fee: FeeFilter;
   level: LevelFilter;
 }
 
-const EMPTY: Filters = { batchId: "", courtId: "", fee: "ALL", level: "ALL" };
+const EMPTY: Filters = { status: "CURRENT", batchId: "", courtId: "", fee: "ALL", level: "ALL" };
 
 export default function PlayersPage() {
   const canEdit = useCanSeeFees();
@@ -42,13 +43,21 @@ export default function PlayersPage() {
     q: search || undefined,
     batchId: filters.batchId || undefined,
     courtId: filters.courtId || undefined,
-    feeStatus: filters.fee === "ALL" ? undefined : filters.fee,
+    // Players who left owe nothing, so the fee filter only applies to current players.
+    feeStatus: filters.fee === "ALL" || filters.status === "LEFT" ? undefined : filters.fee,
+    active: filters.status === "LEFT" ? false : undefined,
     level: filters.level === "ALL" ? undefined : filters.level,
   };
   const players = usePlayers(query);
   const list = players.data?.pages.flatMap((p) => p.content) ?? [];
   const total = players.data?.pages[0]?.totalElements ?? 0;
-  const activeFilterCount = [filters.batchId, filters.courtId, filters.fee !== "ALL", filters.level !== "ALL"].filter(Boolean).length;
+  const activeFilterCount = [
+    filters.status === "LEFT",
+    filters.batchId,
+    filters.courtId,
+    filters.fee !== "ALL" && filters.status !== "LEFT",
+    filters.level !== "ALL",
+  ].filter(Boolean).length;
   const listTop = useRef<HTMLDivElement>(null);
   const pager = usePager({
     total,
@@ -187,6 +196,15 @@ function FilterControls({
     <div className={stacked ? "space-y-5" : "mt-3 space-y-3"}>
       <div className={stacked ? "space-y-3" : "flex flex-wrap items-center gap-3"}>
         <Select
+          aria-label="Status"
+          value={filters.status}
+          onChange={(e) => set("status", e.target.value as Filters["status"])}
+          className={stacked ? "" : "w-48"}
+        >
+          <option value="CURRENT">Current players</option>
+          <option value="LEFT">Left the academy</option>
+        </Select>
+        <Select
           aria-label="Batch"
           value={filters.batchId}
           onChange={(e) => set("batchId", e.target.value ? Number(e.target.value) : "")}
@@ -212,16 +230,18 @@ function FilterControls({
             </option>
           ))}
         </Select>
-        <PillGroup<FeeFilter>
-          label="Fee status"
-          value={filters.fee}
-          onChange={(v) => set("fee", v)}
-          options={[
-            { value: "ALL", label: "Any fee status" },
-            { value: "PAID", label: "Paid" },
-            { value: "DUE", label: "Due" },
-          ]}
-        />
+        {filters.status === "CURRENT" && (
+          <PillGroup<FeeFilter>
+            label="Fee status"
+            value={filters.fee}
+            onChange={(v) => set("fee", v)}
+            options={[
+              { value: "ALL", label: "Any fee status" },
+              { value: "PAID", label: "Paid" },
+              { value: "DUE", label: "Due" },
+            ]}
+          />
+        )}
       </div>
       <div className="flex items-center gap-3">
         {!stacked && <SlidersHorizontal className="h-5 w-5 shrink-0 text-muted" aria-hidden />}

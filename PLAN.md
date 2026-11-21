@@ -134,7 +134,8 @@ Errors return `ApiError { status, code, message, fieldErrors[], path, timestamp 
 | GET | `/dashboard/today-courts` | courts[] → slots[] {batch, time, coach, playerCount, status DONE\|LIVE\|UPCOMING} | any |
 | GET | `/courts` · `/batches?courtId=&date=` | `date` filters batches to those running on that weekday | any |
 | GET / POST | `/players` | GET: `?q=&batchId=&courtId=&level=&feeStatus=PAID\|DUE&active=` (paginated, includes feeStatus). POST: create (server assigns the next `RKS###` code) | GET any / POST owner |
-| GET / PUT / DELETE | `/players/{id}` | DELETE is a soft delete (`active=false`) | GET any / write owner |
+| GET / PUT / DELETE | `/players/{id}` | DELETE only for a player added by mistake (no payments, attendance or payment reports); otherwise 409 | GET any / write owner |
+| POST | `/players/{id}/leave` · `/players/{id}/rejoin` | left players keep their history and drop off lists, dues and reminders | owner |
 | GET | `/players/{id}/attendance?from=&to=` | heatmap data + percentage | any |
 | GET | `/players/{id}/payments` | fee history timeline, newest first | owner |
 | GET | `/players/{id}/progress` | level history + skill scores | any |

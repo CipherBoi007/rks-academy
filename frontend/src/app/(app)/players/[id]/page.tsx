@@ -5,6 +5,7 @@ import { use, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, MessageCircle, Pencil, Phone, ReceiptIndianRupee, SlidersHorizontal } from "lucide-react";
 import { FamilyLoginCard } from "@/components/domain/FamilyLoginCard";
+import { LeaveOrDelete, LeftBanner } from "@/components/domain/PlayerExit";
 import { AttendanceCard, FeeTimeline, ProfileHeader, ProfileInfoCards, SkillsCard } from "@/components/domain/profile";
 import { PlayerSheet } from "@/components/domain/sheets/PlayerSheet";
 import { RecordPaymentSheet, receiptHref } from "@/components/domain/sheets/RecordPaymentSheet";
@@ -49,6 +50,7 @@ export default function PlayerProfilePage({ params }: { params: Promise<{ id: st
         </LoadingRegion>
       ) : (
         <>
+          {canSeeFees && !player.data.active && <LeftBanner player={player.data} />}
           <ProfileHeader
             player={player.data}
             actions={
@@ -62,9 +64,11 @@ export default function PlayerProfilePage({ params }: { params: Promise<{ id: st
                     <Button variant="secondary" icon={<Pencil className="h-5 w-5" aria-hidden />} onClick={() => setEditing(true)}>
                       Edit
                     </Button>
-                    <Button icon={<ReceiptIndianRupee className="h-5 w-5" aria-hidden />} onClick={() => setCollecting(true)}>
-                      Collect fee
-                    </Button>
+                    {player.data.active && (
+                      <Button icon={<ReceiptIndianRupee className="h-5 w-5" aria-hidden />} onClick={() => setCollecting(true)}>
+                        Collect fee
+                      </Button>
+                    )}
                   </>
                 )}
               </>
@@ -91,6 +95,7 @@ export default function PlayerProfilePage({ params }: { params: Promise<{ id: st
           </div>
           {canSeeFees && <StaffFeeHistory player={player.data} />}
           {canSeeFees && player.data.active && <FamilyLoginCard playerId={id} />}
+          {canSeeFees && player.data.active && <LeaveOrDelete player={player.data} />}
 
           {progress.data && (
             <SkillsSheet open={editingSkills} onClose={() => setEditingSkills(false)} playerId={id} progress={progress.data} />

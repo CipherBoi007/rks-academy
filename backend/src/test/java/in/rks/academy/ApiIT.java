@@ -557,7 +557,7 @@ class ApiIT {
     void accessEndsWhenTheChildLeavesTheAcademy() throws Exception {
         String token = familyLogin("9000000105"); // Karthik Raja's parent
         assertThat(call(token, HttpMethod.GET, "/family/me", null).getStatusCode()).isEqualTo(HttpStatus.OK);
-        call(owner, HttpMethod.DELETE, "/players/5", null);
+        call(owner, HttpMethod.POST, "/players/5/leave", null);
         assertThat(call(token, HttpMethod.GET, "/family/me", null).getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
@@ -684,6 +684,40 @@ class ApiIT {
         assertThat(me.get("holderName").asText()).isEqualTo("Ravi Shankar");
         assertThat(me.get("children")).hasSize(1);
         assertThat(me.get("children").get(0).get("self").asBoolean()).isTrue();
+    }
+
+    @Test
+    @Order(26)
+    void playersWhoLeaveKeepTheirHistoryAndOnlyMistakesCanBeDeleted() throws Exception {
+        // Player 3 has payments, so they can't be deleted, only marked as left.
+        assertThat(get(owner, "/players/3").get("deletable").asBoolean()).isFalse();
+        ResponseEntity<String> refused = call(owner, HttpMethod.DELETE, "/players/3", null);
+        assertThat(refused.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(json.readTree(refused.getBody()).get("code").asText()).isEqualTo("PLAYER_HAS_HISTORY");
+        assertThat(call(coach, HttpMethod.POST, "/players/3/leave", null).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        JsonNode left = json.readTree(call(owner, HttpMethod.POST, "/players/3/leave", null).getBody());
+        assertThat(left.get("active").asBoolean()).isFalse();
+        assertThat(left.get("feeStatus").asText()).isEqualTo("LEFT");
+        assertThat(get(owner, "/players?q=RKS103").get("totalElements").asInt()).isZero();
+        assertThat(get(owner, "/players?q=RKS103&active=false").get("content").get(0).get("feeStatus").asText())
+                .isEqualTo("LEFT");
+        assertThat(get(owner, "/players/3/payments")).as("receipts are kept").isNotEmpty();
+        assertThat(call(owner, HttpMethod.POST, "/players/3/leave", null).getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+
+        JsonNode back = json.readTree(call(owner, HttpMethod.POST, "/players/3/rejoin", null).getBody());
+        assertThat(back.get("active").asBoolean()).isTrue();
+        assertThat(back.get("code").asText()).isEqualTo("RKS103");
+
+        // A player added by mistake, with nothing on record, can be deleted outright.
+        Map<String, Object> mistake = new HashMap<>(Map.of("name", "Typo Player", "dob", "2015-06-01",
+                "gender", "FEMALE", "contactRelation", "PARENT", "contactName", "Someone",
+                "contactMobile", "9000099003", "level", "BEGINNER", "batchId", 1, "feePlanId", 1));
+        JsonNode created = json.readTree(call(owner, HttpMethod.POST, "/players", mistake).getBody());
+        long id = created.get("id").asLong();
+        assertThat(created.get("deletable").asBoolean()).isTrue();
+        assertThat(call(owner, HttpMethod.DELETE, "/players/" + id, null).getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        assertThat(call(owner, HttpMethod.GET, "/players/" + id, null).getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
 
     /** Demo parents all have PIN 123456 (db/demo/V7_1). */

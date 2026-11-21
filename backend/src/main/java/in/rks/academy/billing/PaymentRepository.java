@@ -25,6 +25,9 @@ public interface PaymentRepository extends JpaRepository<Payment, Long>, JpaSpec
     @EntityGraph(attributePaths = {"player", "plan"})
     Optional<Payment> findWithPlayerById(Long id);
 
+    /** Any payment, voided or not: receipts must never lose their player. */
+    boolean existsByPlayerId(Long playerId);
+
     /** A player's full history, voided payments included (the profile shows them struck through). */
     @EntityGraph(attributePaths = "plan")
     List<Payment> findByPlayerIdOrderByPeriodFromDesc(Long playerId);

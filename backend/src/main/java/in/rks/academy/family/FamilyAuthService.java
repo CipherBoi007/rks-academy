@@ -41,15 +41,18 @@ public class FamilyAuthService {
             new ApiException(HttpStatus.UNAUTHORIZED, "INVALID_CREDENTIALS", "Mobile number or PIN is incorrect");
 
     private final FamilyAccountRepository accounts;
+    private final PaymentReportRepository reports;
     private final PlayerRepository players;
     private final PasswordEncoder encoder;
     private final LoginAttemptLimiter limiter;
     private final JwtService jwt;
     private final Clock clock;
 
-    public FamilyAuthService(FamilyAccountRepository accounts, PlayerRepository players, PasswordEncoder encoder,
-                             LoginAttemptLimiter limiter, JwtService jwt, Clock clock) {
+    public FamilyAuthService(FamilyAccountRepository accounts, PaymentReportRepository reports,
+                             PlayerRepository players, PasswordEncoder encoder, LoginAttemptLimiter limiter,
+                             JwtService jwt, Clock clock) {
         this.accounts = accounts;
+        this.reports = reports;
         this.players = players;
         this.encoder = encoder;
         this.limiter = limiter;
@@ -89,6 +92,20 @@ public class FamilyAuthService {
     }
 
     // ---- For the owner, from a player's profile ----------------------------------------------------------------
+
+    /**
+     * Removes the sign-in for a number nobody uses any more (its last player was deleted). An account with payment
+     * reports is kept, because those reports belong to the academy's records.
+     */
+    @Transactional
+    public void forgetIfUnused(String mobile) {
+        if (players.existsByContactMobile(mobile)) {
+            return;
+        }
+        accounts.findByMobile(mobile)
+                .filter(a -> !reports.existsByAccountId(a.getId()))
+                .ifPresent(accounts::delete);
+    }
 
     @Transactional(readOnly = true)
     public FamilyLogin familyLogin(long playerId) {

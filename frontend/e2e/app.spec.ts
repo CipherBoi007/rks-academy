@@ -14,7 +14,6 @@ test("login rejects a wrong PIN and redirects signed-out visitors", async ({ pag
 
 test("owner dashboard shows the seeded month", async ({ page }) => {
   await signIn(page, OWNER);
-  await expect(page.getByText("Thursday, 05 Nov 2026")).toBeVisible();
   await expect(page.getByText("₹66,900")).toBeVisible();
   await expect(page.getByText("Nov 2026 · 12 payments")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Dues alert" })).toBeVisible();

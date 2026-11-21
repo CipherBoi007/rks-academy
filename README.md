@@ -318,7 +318,7 @@ Parents sign in like staff, with no message sent, so sign-in costs nothing howev
    - **5 wrong PINs in a row lock the number for 5 minutes** (`LoginAttemptLimiter`, kept apart from staff lockouts).
    - With a one-time PIN the answer is `{ mustChangePin: true }` and **no token**.
 3. `POST /api/v1/family/auth/set-pin` with `{ mobile, currentPin, newPin }` replaces the PIN (6 to 12 digits, easy ones refused) and returns a family JWT: claim `kind: "family"`, subject = `parent_account.id`, lasting `APP_JWT_FAMILY_TTL` (default 30 days). The portal's **Change PIN** uses the same endpoint.
-4. **Access is re-checked on every request:** the parent must still have **at least one active player** with that mobile number. Deactivating the child or changing the number ends access immediately.
+4. **Access is re-checked on every request:** the parent must still have **at least one active player** with that mobile number. Marking the player as left or changing the number ends access immediately.
 5. **Dev only:** `db/demo/V7_1` gives every demo parent PIN `123456`.
 
 ### Staff and family are fully separate
@@ -434,7 +434,7 @@ All endpoints are under `/api/v1`, JSON in and out. The full, live list is in Sw
 | Auth | `POST /auth/login`, `GET /auth/me`, `POST /auth/change-pin` | public / any staff |
 | Public config | `GET /config/public`: academy name, WhatsApp number, today's date | public |
 | Dashboard | `GET /dashboard/summary`, `GET /dashboard/today-courts` | staff (money figures owner only) |
-| Players | `GET/POST /players`, `GET/PUT/DELETE /players/{id}`, `POST/DELETE /players/{id}/photo`, `GET /players/{id}/attendance`, `GET /players/{id}/progress`, `PUT /players/{id}/skills` | owner; coach read + skills |
+| Players | `GET/POST /players`, `GET/PUT/DELETE /players/{id}` (DELETE only for a player with nothing on record), `POST /players/{id}/leave`, `POST /players/{id}/rejoin`, `POST/DELETE /players/{id}/photo`, `GET /players/{id}/attendance`, `GET /players/{id}/progress`, `PUT /players/{id}/skills` | owner; coach read + skills |
 | Files | `GET /files/{players\|products}/{name}` | signed-in |
 | Attendance | `GET /attendance`, `POST /attendance` | staff |
 | Payments | `GET /payments`, `GET /payments/summary`, `POST /payments/quote`, `POST /payments`, `POST /payments/{id}/void`, `GET /receipts/{yy}/{n}`, `GET /dues`, `GET /players/{id}/payments` | owner |

@@ -25,7 +25,8 @@ public final class PlayerDtos {
     private PlayerDtos() {
     }
 
-    public enum FeeStatus { PAID, DUE }
+    /** LEFT: the player has left the academy, so nothing is due. */
+    public enum FeeStatus { PAID, DUE, LEFT }
 
     public record PlayerSummary(long id, String code, String name, String initials, String photoUrl, int age,
                                 Player.Gender gender, Level level, BatchRef batch, CourtRef court,
@@ -46,7 +47,7 @@ public final class PlayerDtos {
                                int age, Player.Gender gender, String bloodGroup, String address,
                                Level level, FeeStatus feeStatus, ContactInfo contact, LocalDate joinDate,
                                BatchInfo batch, CourtRef court, CoachInfo coach, PlanRef plan, UUID siblingGroupId,
-                               List<PlayerRef> siblings, boolean active) {
+                               List<PlayerRef> siblings, boolean active, boolean deletable) {
     }
 
     public record PlayerRequest(

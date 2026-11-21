@@ -76,6 +76,8 @@ export interface PlayerFilters {
   courtId?: number;
   level?: Level;
   feeStatus?: FeeStatus;
+  /** false lists players who have left; the default is current players. */
+  active?: boolean;
 }
 
 export interface PaymentFilters {

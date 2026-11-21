@@ -14,6 +14,8 @@ public interface AttendanceRepository extends JpaRepository<AttendanceRecord, Lo
 
     long countByDate(LocalDate date);
 
+    boolean existsByPlayerId(Long playerId);
+
     long countByDateAndStatus(LocalDate date, AttendanceRecord.Status status);
 
     @EntityGraph(attributePaths = {"player", "batch", "batch.court"})

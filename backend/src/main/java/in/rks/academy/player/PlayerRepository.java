@@ -31,10 +31,12 @@ public interface PlayerRepository extends JpaRepository<Player, Long>, JpaSpecif
 
     long countByActiveTrue();
 
-    boolean existsByContactMobileAndActiveTrue(String parentMobile);
+    boolean existsByContactMobileAndActiveTrue(String contactMobile);
+
+    boolean existsByContactMobile(String contactMobile);
 
     @EntityGraph(attributePaths = {"batch", "batch.court", "batch.coach", "feePlan"})
-    List<Player> findByContactMobileAndActiveTrueOrderByJoinDateAsc(String parentMobile);
+    List<Player> findByContactMobileAndActiveTrueOrderByJoinDateAsc(String contactMobile);
 
     long countByActiveTrueAndJoinDateGreaterThanEqual(LocalDate since);
 

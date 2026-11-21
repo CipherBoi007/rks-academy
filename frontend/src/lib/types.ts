@@ -3,7 +3,8 @@
 export type Role = "OWNER" | "COACH";
 export type Level = "BEGINNER" | "INTERMEDIATE" | "ADVANCED" | "TOURNAMENT";
 export type Gender = "MALE" | "FEMALE" | "OTHER";
-export type FeeStatus = "PAID" | "DUE";
+/** LEFT: the player has left the academy, so nothing is due. */
+export type FeeStatus = "PAID" | "DUE" | "LEFT";
 export type PaymentMode = "UPI" | "CASH";
 export type AttendanceStatus = "PRESENT" | "ABSENT";
 export type Skill = "FOOTWORK" | "SMASH" | "DEFENCE" | "NET_PLAY" | "STAMINA";
@@ -96,6 +97,8 @@ export interface PlayerDetail {
   siblingGroupId: string | null;
   siblings: PlayerRef[];
   active: boolean;
+  /** Nothing on record yet (no payments, attendance or payment reports), so the owner may delete them. */
+  deletable: boolean;
 }
 
 /** Who manages a player's account: the player themselves (18 and over), or a parent or guardian. */

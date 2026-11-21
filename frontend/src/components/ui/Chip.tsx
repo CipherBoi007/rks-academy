@@ -15,11 +15,11 @@ export function StatusChip({ status }: { status: FeeStatus }) {
       className={cn(
         shape,
         "px-2.5 py-1.5 text-[11px] uppercase tracking-wide text-white",
-        status === "PAID" ? "bg-primary" : "bg-alert",
+        status === "PAID" ? "bg-primary" : status === "DUE" ? "bg-alert" : "bg-muted",
       )}
     >
       <span className="h-1.5 w-1.5 rounded-full bg-white" aria-hidden />
-      {status === "PAID" ? "Paid" : "Due"}
+      {status === "PAID" ? "Paid" : status === "DUE" ? "Due" : "Left"}
     </span>
   );
 }
